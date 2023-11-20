@@ -1,9 +1,4 @@
 import datetime
-import time
-import threading
-
-import schedule
-
 from service.bing_daily_img import get_bing_wallpaper_cn, get_bing_wallpaper_us
 from service.cos import CosCli
 from util.download import download_image
@@ -11,7 +6,6 @@ from util.download import download_image
 
 def upload_bing_wallpaper():
     cos = CosCli()
-
     cn_image_path = '/tmp/bing_wallpaper_cn.jpeg'
     cn_image_url = get_bing_wallpaper_cn()
     download_image(cn_image_url, cn_image_path)

@@ -13,13 +13,14 @@ _sym_db = _symbol_database.Default()
 
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x0cspider.proto\x12\x05proto\"\x07\n\x05\x45mpty\"\x19\n\nSpiderResp\x12\x0b\n\x03url\x18\x01 \x01(\t2\x81\x01\n\rSpiderService\x12\x37\n\x12GetCNBingWallPaper\x12\x0c.proto.Empty\x1a\x11.proto.SpiderResp\"\x00\x12\x37\n\x12GetUSBingWallPaper\x12\x0c.proto.Empty\x1a\x11.proto.SpiderResp\"\x00\x62\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x0cspider.proto\x12\x05proto\"\x07\n\x05\x45mpty\"\x19\n\nSpiderResp\x12\x0b\n\x03url\x18\x01 \x01(\t2\x81\x01\n\rSpiderService\x12\x37\n\x12GetCNBingWallPaper\x12\x0c.proto.Empty\x1a\x11.proto.SpiderResp\"\x00\x12\x37\n\x12GetUSBingWallPaper\x12\x0c.proto.Empty\x1a\x11.proto.SpiderResp\"\x00\x42\x16Z\x14spider_pb/;spider_pbb\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
 _builder.BuildTopDescriptorsAndMessages(DESCRIPTOR, 'spider_pb2', _globals)
 if _descriptor._USE_C_DESCRIPTORS == False:
   DESCRIPTOR._options = None
+  DESCRIPTOR._serialized_options = b'Z\024spider_pb/;spider_pb'
   _globals['_EMPTY']._serialized_start=23
   _globals['_EMPTY']._serialized_end=30
   _globals['_SPIDERRESP']._serialized_start=32

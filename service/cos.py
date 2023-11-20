@@ -9,16 +9,16 @@ class CosCli:
     _instance = None
 
     def __init__(self):
-        self.secret_id = os.environ('TC_SECRET_ID')
-        self.secret_key = os.environ('TC_SECRET_KEY')
+        self.secret_id = os.environ.get('TC_SECRET_ID')
+        self.secret_key = os.environ.get('TC_SECRET_KEY')
         self.region = 'ap-nanjing'
         self.bucket = 'bot-1317156498'
 
     def __new__(cls, *args, **kwargs):
         if not isinstance(cls._instance, cls):
             cls._instance = super(CosCli, cls).__new__(cls, *args, **kwargs)
-            cls._instance.secret_id = os.environ('TC_SECRET_ID')
-            cls._instance.secret_key = os.environ('TC_SECRET_KEY')
+            cls._instance.secret_id = os.environ.get('TC_SECRET_ID')
+            cls._instance.secret_key = os.environ.get('TC_SECRET_KEY')
             cls._instance.region = 'ap-nanjing'
             cls._instance.bucket = 'bot-1317156498'
         return cls._instance

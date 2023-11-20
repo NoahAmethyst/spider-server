@@ -1,6 +1,9 @@
+import os
+
 import requests
 
 from service.cache import DailyCache
+
 cache = DailyCache()
 
 
@@ -22,7 +25,10 @@ def get_bing_wallpaper_us():
     image_url = cache.get(k)
     if image_url is not None:
         return image_url
-    url = "https://remote-proxy.deno.dev/HPImageArchive.aspx?format=js&idx=0&n=1&mkt=en-US"
+    remote_host = os.environ.get('REMOTE_HOST')
+    if remote_host is None:
+        remote_host = 'www.bing.com'
+    url = f"https://{remote_host}/HPImageArchive.aspx?format=js&idx=0&n=1&mkt=en-US"
     headers = {'remote': 'www.bing.com'}
     response = requests.get(url, headers=headers)
     image_data = response.json()

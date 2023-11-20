@@ -1,13 +1,10 @@
-FROM python:3.11.2-slim-bullseye
+FROM python:3.11.2-alpine
 
-ENV DEBIAN_FRONTEND=noninteractive
-
-RUN mkdir -p /app
 WORKDIR /app
 
-COPY requirements.txt /app
+COPY ./ .
 RUN pip install --no-cache-dir -r requirements.txt && pip cache purge
 
-COPY . /app
+EXPOSE 9090
 
-CMD ["python', '/app/main.py"]
+CMD ["python3', '/app/main.py"]

@@ -7,4 +7,4 @@ RUN pip3 install --no-cache-dir -r requirements.txt && pip cache purge
 
 EXPOSE 9090
 
-ENTRYPOINT ["python3', '/app/main.py"]
+ENTRYPOINT ["python3", "/app/main.py"]

@@ -1,0 +1,18 @@
+name: Update App
+# Only trigger, when the build docker  workflow succeeded
+on:
+  workflow_run:
+    workflows: ["Docker Image CI"]
+    types:
+      - completed
+
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Update Pod
+        uses: NoahAmethyst/kuber-opt-action@v1.0.0
+        with:
+          server: ${{ secrets.GRPC_SERVER }}
+          action: delete-pod
+          app: spider

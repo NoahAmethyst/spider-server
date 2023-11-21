@@ -13,7 +13,7 @@ class SpiderService(spider_pb2_grpc.SpiderServiceServicer):
             request: spider_pb2.SpiderReq,
             context: grpc.aio.ServicerContext,
     ) -> spider_pb2.SpiderResp:
-        url = bing_daily_img.get_bing_wallpaper_cn(request.is_mobile)
+        url, _ = bing_daily_img.get_bing_wallpaper_cn(request.is_mobile)
         return spider_pb2.SpiderResp(url=url)
 
     async def GetUSBingWallPaper(
@@ -21,7 +21,7 @@ class SpiderService(spider_pb2_grpc.SpiderServiceServicer):
             request: spider_pb2.SpiderReq,
             context: grpc.aio.ServicerContext,
     ) -> spider_pb2.SpiderResp:
-        url = bing_daily_img.get_bing_wallpaper_us(request.is_mobile)
+        url, _ = bing_daily_img.get_bing_wallpaper_us(request.is_mobile)
         return spider_pb2.SpiderResp(url=url)
 
 

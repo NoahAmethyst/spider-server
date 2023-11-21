@@ -10,18 +10,18 @@ from service import bing_daily_img
 class SpiderService(spider_pb2_grpc.SpiderServiceServicer):
     async def GetCNBingWallPaper(
             self,
-            request: spider_pb2.Empty,
+            request: spider_pb2.SpiderReq,
             context: grpc.aio.ServicerContext,
     ) -> spider_pb2.SpiderResp:
-        url = bing_daily_img.get_bing_wallpaper_cn()
+        url = bing_daily_img.get_bing_wallpaper_cn(request.is_mobile)
         return spider_pb2.SpiderResp(url=url)
 
     async def GetUSBingWallPaper(
             self,
-            request: spider_pb2.Empty,
+            request: spider_pb2.SpiderReq,
             context: grpc.aio.ServicerContext,
     ) -> spider_pb2.SpiderResp:
-        url = bing_daily_img.get_bing_wallpaper_us()
+        url = bing_daily_img.get_bing_wallpaper_us(request.is_mobile)
         return spider_pb2.SpiderResp(url=url)
 
 

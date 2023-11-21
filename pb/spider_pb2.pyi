@@ -4,9 +4,11 @@ from typing import ClassVar as _ClassVar, Optional as _Optional
 
 DESCRIPTOR: _descriptor.FileDescriptor
 
-class Empty(_message.Message):
-    __slots__ = []
-    def __init__(self) -> None: ...
+class SpiderReq(_message.Message):
+    __slots__ = ["is_mobile"]
+    IS_MOBILE_FIELD_NUMBER: _ClassVar[int]
+    is_mobile: bool
+    def __init__(self, is_mobile: bool = ...) -> None: ...
 
 class SpiderResp(_message.Message):
     __slots__ = ["url"]

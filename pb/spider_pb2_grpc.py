@@ -17,12 +17,12 @@ class SpiderServiceStub(object):
         """
         self.GetCNBingWallPaper = channel.unary_unary(
                 '/proto.SpiderService/GetCNBingWallPaper',
-                request_serializer=spider__pb2.Empty.SerializeToString,
+                request_serializer=spider__pb2.SpiderReq.SerializeToString,
                 response_deserializer=spider__pb2.SpiderResp.FromString,
                 )
         self.GetUSBingWallPaper = channel.unary_unary(
                 '/proto.SpiderService/GetUSBingWallPaper',
-                request_serializer=spider__pb2.Empty.SerializeToString,
+                request_serializer=spider__pb2.SpiderReq.SerializeToString,
                 response_deserializer=spider__pb2.SpiderResp.FromString,
                 )
 
@@ -49,12 +49,12 @@ def add_SpiderServiceServicer_to_server(servicer, server):
     rpc_method_handlers = {
             'GetCNBingWallPaper': grpc.unary_unary_rpc_method_handler(
                     servicer.GetCNBingWallPaper,
-                    request_deserializer=spider__pb2.Empty.FromString,
+                    request_deserializer=spider__pb2.SpiderReq.FromString,
                     response_serializer=spider__pb2.SpiderResp.SerializeToString,
             ),
             'GetUSBingWallPaper': grpc.unary_unary_rpc_method_handler(
                     servicer.GetUSBingWallPaper,
-                    request_deserializer=spider__pb2.Empty.FromString,
+                    request_deserializer=spider__pb2.SpiderReq.FromString,
                     response_serializer=spider__pb2.SpiderResp.SerializeToString,
             ),
     }
@@ -80,7 +80,7 @@ class SpiderService(object):
             timeout=None,
             metadata=None):
         return grpc.experimental.unary_unary(request, target, '/proto.SpiderService/GetCNBingWallPaper',
-            spider__pb2.Empty.SerializeToString,
+            spider__pb2.SpiderReq.SerializeToString,
             spider__pb2.SpiderResp.FromString,
             options, channel_credentials,
             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
@@ -97,7 +97,7 @@ class SpiderService(object):
             timeout=None,
             metadata=None):
         return grpc.experimental.unary_unary(request, target, '/proto.SpiderService/GetUSBingWallPaper',
-            spider__pb2.Empty.SerializeToString,
+            spider__pb2.SpiderReq.SerializeToString,
             spider__pb2.SpiderResp.FromString,
             options, channel_credentials,
             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)

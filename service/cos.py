@@ -30,11 +30,11 @@ class CosCli:
         # file stream simple upload
 
         with open(file_path, 'rb') as fp:
-            logging.info('upload file {} to tencent cos', file_path)
+            logging.info(f'upload file {file_path} to tencent cos')
             client.put_object(
                 Bucket=self.bucket,
                 Body=fp,
-                Key='{}/{}}'.format(cos_path, cos_name),
+                Key='{}/{}'.format(cos_path, cos_name),
                 StorageClass='STANDARD',
                 ContentType='text/html; charset=utf-8'
             )

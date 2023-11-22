@@ -26,7 +26,5 @@ urllib3==2.1.0
 xmltodict==0.13.0
 xxhash==3.4.1
 schedule~=1.2.1
-django-scheduler~=0.10.1
 python-binance~=1.0.19
 coloredlogs~=15.0.1
-binance~=0.3

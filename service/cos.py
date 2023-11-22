@@ -4,6 +4,8 @@ import os
 from qcloud_cos import CosConfig
 from qcloud_cos import CosS3Client
 
+from util.logger import logger
+
 
 class CosCli:
     _instance = None
@@ -30,7 +32,7 @@ class CosCli:
         # file stream simple upload
 
         with open(file_path, 'rb') as fp:
-            logging.info(f'upload file {file_path} to tencent cos')
+            logger.info(f'upload file {file_path} to tencent cos')
             client.put_object(
                 Bucket=self.bucket,
                 Body=fp,

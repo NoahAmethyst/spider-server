@@ -5,6 +5,7 @@ import grpc
 from grpc_reflection.v1alpha import reflection
 from pb import spider_pb2, spider_pb2_grpc
 from service import bing_daily_img
+from util.logger import logger
 
 
 class SpiderService(spider_pb2_grpc.SpiderServiceServicer):
@@ -32,7 +33,7 @@ async def start(addr) -> None:
     if addr is not None:
         listen_addr = "0.0.0.0:{}".format(addr)
     server.add_insecure_port(listen_addr)
-    logging.info("Starting server on %s", listen_addr)
+    logger.info("Starting server on %s", listen_addr)
 
     SERVICE_NAMES = (
         spider_pb2.DESCRIPTOR.services_by_name['SpiderService'].full_name,

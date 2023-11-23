@@ -1,10 +1,13 @@
 import datetime
 import os
+import time
 from urllib.parse import urlparse, parse_qs
 
 import requests
+from requests import JSONDecodeError
 
 from service.cache import DailyCache
+from util.logger import logger
 
 cache = DailyCache()
 
@@ -42,15 +45,24 @@ def get_bing_wallpaper_us(is_mobile):
 
 
 def parse_image_info(is_mobile, k, response):
-    image_data = response.json()
-    if is_mobile is True:
-        image_url = "http://www.bing.com" + image_data["images"][0]["urlbase"] + '_1080x1920.jpg'
-    else:
-        image_url = "http://www.bing.com" + image_data["images"][0]["url"]
-    cache.set(k, image_url)
-
-    img_id = parse_image_id(image_url, k)
-    return image_url, img_id
+    max_try = 3
+    curr = 0
+    try:
+        image_data = response.json()
+        if is_mobile is True:
+            image_url = "http://www.bing.com" + image_data["images"][0]["urlbase"] + '_1080x1920.jpg'
+        else:
+            image_url = "http://www.bing.com" + image_data["images"][0]["url"]
+        cache.set(k, image_url)
+        img_id = parse_image_id(image_url, k)
+        return image_url, img_id
+    except JSONDecodeError as e:
+        if curr > max_try:
+            logger.error('Max retry time exceeded.')
+        logger.error(f'parse image info failed:{e}\nGot response:{response}\nretry:{curr + 1}')
+        curr += 1
+        time.sleep(1)
+        parse_image_info(is_mobile, k, response)
 
 
 def parse_image_id(image_url, k):

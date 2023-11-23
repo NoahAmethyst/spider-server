@@ -23,14 +23,58 @@ service SpiderService {
 
   rpc GetUSBingWallPaper (SpiderReq) returns (SpiderResp) {}
 
+  rpc WeiboHot(SpiderReq) returns (SpiderResp){}
+
+  rpc D36KrHot(SpiderReq) returns (SpiderResp){}
+
+  rpc WallStreetNews(SpiderReq) returns (SpiderResp){}
+
+  rpc ZhihuHot(SpiderReq) returns (SpiderResp){}
+
 }
 
 // The request message containing the user's name.
 message SpiderReq {
-  bool is_mobile=1;
+  bool is_mobile = 1;
+  int64 size = 2;
 }
 
 // The response message containing the greetings
 message SpiderResp {
   string url = 1;
+  string error = 10;
+  repeated WeiboHot weiboHotList = 2;
+  repeated D36KrHot d36KrHotList = 3;
+  repeated WallStreetNew wallStreetNews = 4;
+  repeated ZhihuHot zhihuHotList = 5;
+}
+
+message WeiboHot{
+  string title = 1;
+  string url = 2;
+  int64 hot = 3;
+  int64 rank = 4;
+
+}
+
+message D36KrHot{
+  string title = 1;
+  string url = 2;
+  int64 rank = 3;
+}
+
+
+message WallStreetNew{
+  string title = 1;
+  string url = 2;
+  string content = 3;
+}
+
+
+message ZhihuHot{
+  string title = 1;
+  string url = 2;
+  string excerpt = 3;
+  int64 rank = 4;
+  int64 created = 5;
 }

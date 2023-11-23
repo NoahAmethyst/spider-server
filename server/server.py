@@ -5,6 +5,10 @@ import grpc
 from grpc_reflection.v1alpha import reflection
 from pb import spider_pb2, spider_pb2_grpc
 from service import bing_daily_img
+from service.d36kr import get_36kr_hot
+from service.wallstreeet_news import get_wallstreet_news
+from service.weibo_hot import get_weibo_hot
+from service.zhihu_hot import get_zhihu_hot
 from util.logger import logger
 
 
@@ -24,6 +28,74 @@ class SpiderService(spider_pb2_grpc.SpiderServiceServicer):
     ) -> spider_pb2.SpiderResp:
         url, _ = bing_daily_img.get_bing_wallpaper_us(request.is_mobile)
         return spider_pb2.SpiderResp(url=url)
+
+    async def WeiboHot(
+            self,
+            request: spider_pb2.SpiderReq,
+            context: grpc.aio.ServicerContext,
+    ) -> spider_pb2.SpiderResp:
+        resp = spider_pb2.SpiderResp()
+        try:
+            data = get_weibo_hot()
+            if request.size > 0:
+                resp.weiboHotList.extend(data[:request.size])
+            else:
+                resp.weiboHotList.extend(data)
+        except Exception as e:
+            resp.error = e.__str__()
+
+        return resp
+
+    async def D36KrHot(
+            self,
+            request: spider_pb2.SpiderReq,
+            context: grpc.aio.ServicerContext,
+    ) -> spider_pb2.SpiderResp:
+        resp = spider_pb2.SpiderResp()
+        try:
+            data = get_36kr_hot()
+            if request.size > 0:
+                resp.d36KrHotList.extend(data[:request.size])
+            else:
+                resp.d36KrHotList.extend(data)
+        except Exception as e:
+            resp.error = e
+
+        return resp
+
+    async def WallStreetNews(
+            self,
+            request: spider_pb2.SpiderReq,
+            context: grpc.aio.ServicerContext,
+    ) -> spider_pb2.SpiderResp:
+        resp = spider_pb2.SpiderResp()
+        try:
+            data = get_wallstreet_news()
+            if request.size > 0:
+                resp.wallStreetNews.extend(data[:request.size])
+            else:
+                resp.wallStreetNews.extend(data)
+        except Exception as e:
+            resp.error = e
+
+        return resp
+
+    async def ZhihuHot(
+            self,
+            request: spider_pb2.SpiderReq,
+            context: grpc.aio.ServicerContext,
+    ) -> spider_pb2.SpiderResp:
+        resp = spider_pb2.SpiderResp()
+        try:
+            data = get_zhihu_hot()
+            if request.size > 0:
+                resp.zhihuHotList.extend(data[:request.size])
+            else:
+                resp.zhihuHotList.extend(data)
+        except Exception as e:
+            resp.error = e
+
+        return resp
 
 
 async def start(addr) -> None:

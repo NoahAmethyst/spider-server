@@ -25,6 +25,26 @@ class SpiderServiceStub(object):
                 request_serializer=spider__pb2.SpiderReq.SerializeToString,
                 response_deserializer=spider__pb2.SpiderResp.FromString,
                 )
+        self.WeiboHot = channel.unary_unary(
+                '/proto.SpiderService/WeiboHot',
+                request_serializer=spider__pb2.SpiderReq.SerializeToString,
+                response_deserializer=spider__pb2.SpiderResp.FromString,
+                )
+        self.D36KrHot = channel.unary_unary(
+                '/proto.SpiderService/D36KrHot',
+                request_serializer=spider__pb2.SpiderReq.SerializeToString,
+                response_deserializer=spider__pb2.SpiderResp.FromString,
+                )
+        self.WallStreetNews = channel.unary_unary(
+                '/proto.SpiderService/WallStreetNews',
+                request_serializer=spider__pb2.SpiderReq.SerializeToString,
+                response_deserializer=spider__pb2.SpiderResp.FromString,
+                )
+        self.ZhihuHot = channel.unary_unary(
+                '/proto.SpiderService/ZhihuHot',
+                request_serializer=spider__pb2.SpiderReq.SerializeToString,
+                response_deserializer=spider__pb2.SpiderResp.FromString,
+                )
 
 
 class SpiderServiceServicer(object):
@@ -44,6 +64,30 @@ class SpiderServiceServicer(object):
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
+    def WeiboHot(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def D36KrHot(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def WallStreetNews(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def ZhihuHot(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
 
 def add_SpiderServiceServicer_to_server(servicer, server):
     rpc_method_handlers = {
@@ -54,6 +98,26 @@ def add_SpiderServiceServicer_to_server(servicer, server):
             ),
             'GetUSBingWallPaper': grpc.unary_unary_rpc_method_handler(
                     servicer.GetUSBingWallPaper,
+                    request_deserializer=spider__pb2.SpiderReq.FromString,
+                    response_serializer=spider__pb2.SpiderResp.SerializeToString,
+            ),
+            'WeiboHot': grpc.unary_unary_rpc_method_handler(
+                    servicer.WeiboHot,
+                    request_deserializer=spider__pb2.SpiderReq.FromString,
+                    response_serializer=spider__pb2.SpiderResp.SerializeToString,
+            ),
+            'D36KrHot': grpc.unary_unary_rpc_method_handler(
+                    servicer.D36KrHot,
+                    request_deserializer=spider__pb2.SpiderReq.FromString,
+                    response_serializer=spider__pb2.SpiderResp.SerializeToString,
+            ),
+            'WallStreetNews': grpc.unary_unary_rpc_method_handler(
+                    servicer.WallStreetNews,
+                    request_deserializer=spider__pb2.SpiderReq.FromString,
+                    response_serializer=spider__pb2.SpiderResp.SerializeToString,
+            ),
+            'ZhihuHot': grpc.unary_unary_rpc_method_handler(
+                    servicer.ZhihuHot,
                     request_deserializer=spider__pb2.SpiderReq.FromString,
                     response_serializer=spider__pb2.SpiderResp.SerializeToString,
             ),
@@ -97,6 +161,74 @@ class SpiderService(object):
             timeout=None,
             metadata=None):
         return grpc.experimental.unary_unary(request, target, '/proto.SpiderService/GetUSBingWallPaper',
+            spider__pb2.SpiderReq.SerializeToString,
+            spider__pb2.SpiderResp.FromString,
+            options, channel_credentials,
+            insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
+
+    @staticmethod
+    def WeiboHot(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(request, target, '/proto.SpiderService/WeiboHot',
+            spider__pb2.SpiderReq.SerializeToString,
+            spider__pb2.SpiderResp.FromString,
+            options, channel_credentials,
+            insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
+
+    @staticmethod
+    def D36KrHot(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(request, target, '/proto.SpiderService/D36KrHot',
+            spider__pb2.SpiderReq.SerializeToString,
+            spider__pb2.SpiderResp.FromString,
+            options, channel_credentials,
+            insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
+
+    @staticmethod
+    def WallStreetNews(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(request, target, '/proto.SpiderService/WallStreetNews',
+            spider__pb2.SpiderReq.SerializeToString,
+            spider__pb2.SpiderResp.FromString,
+            options, channel_credentials,
+            insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
+
+    @staticmethod
+    def ZhihuHot(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(request, target, '/proto.SpiderService/ZhihuHot',
             spider__pb2.SpiderReq.SerializeToString,
             spider__pb2.SpiderResp.FromString,
             options, channel_credentials,

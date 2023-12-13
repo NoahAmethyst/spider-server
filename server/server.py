@@ -5,6 +5,7 @@ import grpc
 from grpc_reflection.v1alpha import reflection
 from pb import spider_pb2, spider_pb2_grpc
 from service import bing_daily_img
+from service.bing_copilot import ask_copilot
 from service.d36kr import get_36kr_hot
 from service.wallstreeet_news import get_wallstreet_news
 from service.weibo_hot import get_weibo_hot
@@ -42,6 +43,7 @@ class SpiderService(spider_pb2_grpc.SpiderServiceServicer):
             else:
                 resp.weiboHotList.extend(data)
         except Exception as e:
+            logger.error(e)
             resp.error = e.__str__()
 
         return resp
@@ -59,7 +61,8 @@ class SpiderService(spider_pb2_grpc.SpiderServiceServicer):
             else:
                 resp.d36KrHotList.extend(data)
         except Exception as e:
-            resp.error = e
+            logger.error(e)
+            resp.error = e.__str__()
 
         return resp
 
@@ -76,7 +79,8 @@ class SpiderService(spider_pb2_grpc.SpiderServiceServicer):
             else:
                 resp.wallStreetNews.extend(data)
         except Exception as e:
-            resp.error = e
+            logger.error(e)
+            resp.error = e.__str__()
 
         return resp
 
@@ -93,8 +97,23 @@ class SpiderService(spider_pb2_grpc.SpiderServiceServicer):
             else:
                 resp.zhihuHotList.extend(data)
         except Exception as e:
-            resp.error = e
+            logger.error(e)
+            resp.error = e.__str__()
 
+        return resp
+
+    async def AskCopilot(
+            self,
+            request: spider_pb2.SpiderReq,
+            context: grpc.aio.ServicerContext,
+    ) -> spider_pb2.SpiderResp:
+        resp = spider_pb2.SpiderResp()
+        try:
+            data = await ask_copilot(request.prompt)
+            resp.copilotResp.CopyFrom(data)
+        except Exception as e:
+            logger.error(e)
+            resp.error = e.__str__()
         return resp
 
 

@@ -45,6 +45,11 @@ class SpiderServiceStub(object):
                 request_serializer=spider__pb2.SpiderReq.SerializeToString,
                 response_deserializer=spider__pb2.SpiderResp.FromString,
                 )
+        self.AskCopilot = channel.unary_unary(
+                '/proto.SpiderService/AskCopilot',
+                request_serializer=spider__pb2.SpiderReq.SerializeToString,
+                response_deserializer=spider__pb2.SpiderResp.FromString,
+                )
 
 
 class SpiderServiceServicer(object):
@@ -88,6 +93,12 @@ class SpiderServiceServicer(object):
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
+    def AskCopilot(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
 
 def add_SpiderServiceServicer_to_server(servicer, server):
     rpc_method_handlers = {
@@ -118,6 +129,11 @@ def add_SpiderServiceServicer_to_server(servicer, server):
             ),
             'ZhihuHot': grpc.unary_unary_rpc_method_handler(
                     servicer.ZhihuHot,
+                    request_deserializer=spider__pb2.SpiderReq.FromString,
+                    response_serializer=spider__pb2.SpiderResp.SerializeToString,
+            ),
+            'AskCopilot': grpc.unary_unary_rpc_method_handler(
+                    servicer.AskCopilot,
                     request_deserializer=spider__pb2.SpiderReq.FromString,
                     response_serializer=spider__pb2.SpiderResp.SerializeToString,
             ),
@@ -229,6 +245,23 @@ class SpiderService(object):
             timeout=None,
             metadata=None):
         return grpc.experimental.unary_unary(request, target, '/proto.SpiderService/ZhihuHot',
+            spider__pb2.SpiderReq.SerializeToString,
+            spider__pb2.SpiderResp.FromString,
+            options, channel_credentials,
+            insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
+
+    @staticmethod
+    def AskCopilot(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(request, target, '/proto.SpiderService/AskCopilot',
             spider__pb2.SpiderReq.SerializeToString,
             spider__pb2.SpiderResp.FromString,
             options, channel_credentials,

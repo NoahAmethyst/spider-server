@@ -13,7 +13,7 @@ _sym_db = _symbol_database.Default()
 
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x0cspider.proto\x12\x05proto\",\n\tSpiderReq\x12\x11\n\tis_mobile\x18\x01 \x01(\x08\x12\x0c\n\x04size\x18\x02 \x01(\x03\"\xcb\x01\n\nSpiderResp\x12\x0b\n\x03url\x18\x01 \x01(\t\x12\r\n\x05\x65rror\x18\n \x01(\t\x12%\n\x0cweiboHotList\x18\x02 \x03(\x0b\x32\x0f.proto.WeiboHot\x12%\n\x0c\x64\x33\x36KrHotList\x18\x03 \x03(\x0b\x32\x0f.proto.D36KrHot\x12,\n\x0ewallStreetNews\x18\x04 \x03(\x0b\x32\x14.proto.WallStreetNew\x12%\n\x0czhihuHotList\x18\x05 \x03(\x0b\x32\x0f.proto.ZhihuHot\"A\n\x08WeiboHot\x12\r\n\x05title\x18\x01 \x01(\t\x12\x0b\n\x03url\x18\x02 \x01(\t\x12\x0b\n\x03hot\x18\x03 \x01(\x03\x12\x0c\n\x04rank\x18\x04 \x01(\x03\"4\n\x08\x44\x33\x36KrHot\x12\r\n\x05title\x18\x01 \x01(\t\x12\x0b\n\x03url\x18\x02 \x01(\t\x12\x0c\n\x04rank\x18\x03 \x01(\x03\"<\n\rWallStreetNew\x12\r\n\x05title\x18\x01 \x01(\t\x12\x0b\n\x03url\x18\x02 \x01(\t\x12\x0f\n\x07\x63ontent\x18\x03 \x01(\t\"V\n\x08ZhihuHot\x12\r\n\x05title\x18\x01 \x01(\t\x12\x0b\n\x03url\x18\x02 \x01(\t\x12\x0f\n\x07\x65xcerpt\x18\x03 \x01(\t\x12\x0c\n\x04rank\x18\x04 \x01(\x03\x12\x0f\n\x07\x63reated\x18\x05 \x01(\x03\x32\xdb\x02\n\rSpiderService\x12;\n\x12GetCNBingWallPaper\x12\x10.proto.SpiderReq\x1a\x11.proto.SpiderResp\"\x00\x12;\n\x12GetUSBingWallPaper\x12\x10.proto.SpiderReq\x1a\x11.proto.SpiderResp\"\x00\x12\x31\n\x08WeiboHot\x12\x10.proto.SpiderReq\x1a\x11.proto.SpiderResp\"\x00\x12\x31\n\x08\x44\x33\x36KrHot\x12\x10.proto.SpiderReq\x1a\x11.proto.SpiderResp\"\x00\x12\x37\n\x0eWallStreetNews\x12\x10.proto.SpiderReq\x1a\x11.proto.SpiderResp\"\x00\x12\x31\n\x08ZhihuHot\x12\x10.proto.SpiderReq\x1a\x11.proto.SpiderResp\"\x00\x42\x16Z\x14spider_pb/;spider_pbb\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x0cspider.proto\x12\x05proto\"<\n\tSpiderReq\x12\x11\n\tis_mobile\x18\x01 \x01(\x08\x12\x0c\n\x04size\x18\x02 \x01(\x03\x12\x0e\n\x06prompt\x18\x03 \x01(\t\"\xf4\x01\n\nSpiderResp\x12\x0b\n\x03url\x18\x01 \x01(\t\x12\r\n\x05\x65rror\x18\n \x01(\t\x12%\n\x0cweiboHotList\x18\x02 \x03(\x0b\x32\x0f.proto.WeiboHot\x12%\n\x0c\x64\x33\x36KrHotList\x18\x03 \x03(\x0b\x32\x0f.proto.D36KrHot\x12,\n\x0ewallStreetNews\x18\x04 \x03(\x0b\x32\x14.proto.WallStreetNew\x12%\n\x0czhihuHotList\x18\x05 \x03(\x0b\x32\x0f.proto.ZhihuHot\x12\'\n\x0b\x63opilotResp\x18\x06 \x01(\x0b\x32\x12.proto.CopilotResp\"A\n\x08WeiboHot\x12\r\n\x05title\x18\x01 \x01(\t\x12\x0b\n\x03url\x18\x02 \x01(\t\x12\x0b\n\x03hot\x18\x03 \x01(\x03\x12\x0c\n\x04rank\x18\x04 \x01(\x03\"4\n\x08\x44\x33\x36KrHot\x12\r\n\x05title\x18\x01 \x01(\t\x12\x0b\n\x03url\x18\x02 \x01(\t\x12\x0c\n\x04rank\x18\x03 \x01(\x03\"<\n\rWallStreetNew\x12\r\n\x05title\x18\x01 \x01(\t\x12\x0b\n\x03url\x18\x02 \x01(\t\x12\x0f\n\x07\x63ontent\x18\x03 \x01(\t\"V\n\x08ZhihuHot\x12\r\n\x05title\x18\x01 \x01(\t\x12\x0b\n\x03url\x18\x02 \x01(\t\x12\x0f\n\x07\x65xcerpt\x18\x03 \x01(\t\x12\x0c\n\x04rank\x18\x04 \x01(\x03\x12\x0f\n\x07\x63reated\x18\x05 \x01(\x03\"3\n\x0b\x43opilotResp\x12\x0f\n\x07\x63ontent\x18\x01 \x01(\t\x12\x13\n\x0bsuggestions\x18\x02 \x03(\t2\x90\x03\n\rSpiderService\x12;\n\x12GetCNBingWallPaper\x12\x10.proto.SpiderReq\x1a\x11.proto.SpiderResp\"\x00\x12;\n\x12GetUSBingWallPaper\x12\x10.proto.SpiderReq\x1a\x11.proto.SpiderResp\"\x00\x12\x31\n\x08WeiboHot\x12\x10.proto.SpiderReq\x1a\x11.proto.SpiderResp\"\x00\x12\x31\n\x08\x44\x33\x36KrHot\x12\x10.proto.SpiderReq\x1a\x11.proto.SpiderResp\"\x00\x12\x37\n\x0eWallStreetNews\x12\x10.proto.SpiderReq\x1a\x11.proto.SpiderResp\"\x00\x12\x31\n\x08ZhihuHot\x12\x10.proto.SpiderReq\x1a\x11.proto.SpiderResp\"\x00\x12\x33\n\nAskCopilot\x12\x10.proto.SpiderReq\x1a\x11.proto.SpiderResp\"\x00\x42\x16Z\x14spider_pb/;spider_pbb\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
@@ -22,17 +22,19 @@ if _descriptor._USE_C_DESCRIPTORS == False:
   DESCRIPTOR._options = None
   DESCRIPTOR._serialized_options = b'Z\024spider_pb/;spider_pb'
   _globals['_SPIDERREQ']._serialized_start=23
-  _globals['_SPIDERREQ']._serialized_end=67
-  _globals['_SPIDERRESP']._serialized_start=70
-  _globals['_SPIDERRESP']._serialized_end=273
-  _globals['_WEIBOHOT']._serialized_start=275
-  _globals['_WEIBOHOT']._serialized_end=340
-  _globals['_D36KRHOT']._serialized_start=342
-  _globals['_D36KRHOT']._serialized_end=394
-  _globals['_WALLSTREETNEW']._serialized_start=396
-  _globals['_WALLSTREETNEW']._serialized_end=456
-  _globals['_ZHIHUHOT']._serialized_start=458
-  _globals['_ZHIHUHOT']._serialized_end=544
-  _globals['_SPIDERSERVICE']._serialized_start=547
-  _globals['_SPIDERSERVICE']._serialized_end=894
+  _globals['_SPIDERREQ']._serialized_end=83
+  _globals['_SPIDERRESP']._serialized_start=86
+  _globals['_SPIDERRESP']._serialized_end=330
+  _globals['_WEIBOHOT']._serialized_start=332
+  _globals['_WEIBOHOT']._serialized_end=397
+  _globals['_D36KRHOT']._serialized_start=399
+  _globals['_D36KRHOT']._serialized_end=451
+  _globals['_WALLSTREETNEW']._serialized_start=453
+  _globals['_WALLSTREETNEW']._serialized_end=513
+  _globals['_ZHIHUHOT']._serialized_start=515
+  _globals['_ZHIHUHOT']._serialized_end=601
+  _globals['_COPILOTRESP']._serialized_start=603
+  _globals['_COPILOTRESP']._serialized_end=654
+  _globals['_SPIDERSERVICE']._serialized_start=657
+  _globals['_SPIDERSERVICE']._serialized_end=1057
 # @@protoc_insertion_point(module_scope)

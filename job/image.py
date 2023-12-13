@@ -29,6 +29,7 @@ def upload_bing_wallpaper():
     except Exception as e:
         logger.error(f'upload bing mobile wallpaper cn failed:{e}')
 
+    try:
         # Upload PC US Bing wallpaper
         us_image_path = '/tmp/bing_wallpaper_us.jpg'
         us_image_url, us_image_name = get_bing_wallpaper_us(is_mobile=False)

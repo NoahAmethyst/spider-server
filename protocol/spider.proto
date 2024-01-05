@@ -31,6 +31,8 @@ service SpiderService {
 
   rpc ZhihuHot(SpiderReq) returns (SpiderResp){}
 
+  rpc OdailyFeeds(SpiderReq) returns(SpiderResp){}
+
   rpc AskCopilot(SpiderReq) returns(SpiderResp){}
 
 }
@@ -50,7 +52,8 @@ message SpiderResp {
   repeated D36KrHot d36KrHotList = 3;
   repeated WallStreetNew wallStreetNews = 4;
   repeated ZhihuHot zhihuHotList = 5;
-  CopilotResp copilotResp = 6;
+  repeated OdailyFeed odailyFeeds = 6;
+  CopilotResp copilotResp = 7;
 }
 
 message WeiboHot{
@@ -81,6 +84,14 @@ message ZhihuHot{
   string excerpt = 3;
   int64 rank = 4;
   int64 created = 5;
+}
+
+message OdailyFeed{
+  string title = 1;
+  string reference_url = 2;
+  int64 id = 3;
+  string description = 4;
+  string url = 5;
 }
 
 message CopilotResp{

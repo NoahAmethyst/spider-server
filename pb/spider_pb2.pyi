@@ -16,13 +16,14 @@ class SpiderReq(_message.Message):
     def __init__(self, is_mobile: bool = ..., size: _Optional[int] = ..., prompt: _Optional[str] = ...) -> None: ...
 
 class SpiderResp(_message.Message):
-    __slots__ = ["url", "error", "weiboHotList", "d36KrHotList", "wallStreetNews", "zhihuHotList", "copilotResp"]
+    __slots__ = ["url", "error", "weiboHotList", "d36KrHotList", "wallStreetNews", "zhihuHotList", "odailyFeeds", "copilotResp"]
     URL_FIELD_NUMBER: _ClassVar[int]
     ERROR_FIELD_NUMBER: _ClassVar[int]
     WEIBOHOTLIST_FIELD_NUMBER: _ClassVar[int]
     D36KRHOTLIST_FIELD_NUMBER: _ClassVar[int]
     WALLSTREETNEWS_FIELD_NUMBER: _ClassVar[int]
     ZHIHUHOTLIST_FIELD_NUMBER: _ClassVar[int]
+    ODAILYFEEDS_FIELD_NUMBER: _ClassVar[int]
     COPILOTRESP_FIELD_NUMBER: _ClassVar[int]
     url: str
     error: str
@@ -30,8 +31,9 @@ class SpiderResp(_message.Message):
     d36KrHotList: _containers.RepeatedCompositeFieldContainer[D36KrHot]
     wallStreetNews: _containers.RepeatedCompositeFieldContainer[WallStreetNew]
     zhihuHotList: _containers.RepeatedCompositeFieldContainer[ZhihuHot]
+    odailyFeeds: _containers.RepeatedCompositeFieldContainer[OdailyFeed]
     copilotResp: CopilotResp
-    def __init__(self, url: _Optional[str] = ..., error: _Optional[str] = ..., weiboHotList: _Optional[_Iterable[_Union[WeiboHot, _Mapping]]] = ..., d36KrHotList: _Optional[_Iterable[_Union[D36KrHot, _Mapping]]] = ..., wallStreetNews: _Optional[_Iterable[_Union[WallStreetNew, _Mapping]]] = ..., zhihuHotList: _Optional[_Iterable[_Union[ZhihuHot, _Mapping]]] = ..., copilotResp: _Optional[_Union[CopilotResp, _Mapping]] = ...) -> None: ...
+    def __init__(self, url: _Optional[str] = ..., error: _Optional[str] = ..., weiboHotList: _Optional[_Iterable[_Union[WeiboHot, _Mapping]]] = ..., d36KrHotList: _Optional[_Iterable[_Union[D36KrHot, _Mapping]]] = ..., wallStreetNews: _Optional[_Iterable[_Union[WallStreetNew, _Mapping]]] = ..., zhihuHotList: _Optional[_Iterable[_Union[ZhihuHot, _Mapping]]] = ..., odailyFeeds: _Optional[_Iterable[_Union[OdailyFeed, _Mapping]]] = ..., copilotResp: _Optional[_Union[CopilotResp, _Mapping]] = ...) -> None: ...
 
 class WeiboHot(_message.Message):
     __slots__ = ["title", "url", "hot", "rank"]
@@ -78,6 +80,20 @@ class ZhihuHot(_message.Message):
     rank: int
     created: int
     def __init__(self, title: _Optional[str] = ..., url: _Optional[str] = ..., excerpt: _Optional[str] = ..., rank: _Optional[int] = ..., created: _Optional[int] = ...) -> None: ...
+
+class OdailyFeed(_message.Message):
+    __slots__ = ["title", "reference_url", "id", "description", "url"]
+    TITLE_FIELD_NUMBER: _ClassVar[int]
+    REFERENCE_URL_FIELD_NUMBER: _ClassVar[int]
+    ID_FIELD_NUMBER: _ClassVar[int]
+    DESCRIPTION_FIELD_NUMBER: _ClassVar[int]
+    URL_FIELD_NUMBER: _ClassVar[int]
+    title: str
+    reference_url: str
+    id: int
+    description: str
+    url: str
+    def __init__(self, title: _Optional[str] = ..., reference_url: _Optional[str] = ..., id: _Optional[int] = ..., description: _Optional[str] = ..., url: _Optional[str] = ...) -> None: ...
 
 class CopilotResp(_message.Message):
     __slots__ = ["content", "suggestions"]

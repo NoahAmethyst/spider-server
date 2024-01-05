@@ -7,6 +7,7 @@ from pb import spider_pb2, spider_pb2_grpc
 from service import bing_daily_img
 from service.bing_copilot import ask_copilot, ask_copilot_http
 from service.d36kr import get_36kr_hot
+from service.odaily import get_odaily_feeds
 from service.wallstreeet_news import get_wallstreet_news
 from service.weibo_hot import get_weibo_hot
 from service.zhihu_hot import get_zhihu_hot
@@ -97,6 +98,25 @@ class SpiderService(spider_pb2_grpc.SpiderServiceServicer):
             else:
                 resp.zhihuHotList.extend(data)
         except Exception as e:
+            logger.error(e)
+            resp.error = e.__str__()
+
+        return resp
+
+    async def OdailyFeeds(
+            self,
+            request: spider_pb2.SpiderReq,
+            context: grpc.aio.ServicerContext,
+    ) -> spider_pb2.SpiderResp:
+        resp = spider_pb2.SpiderResp()
+        try:
+            data = get_odaily_feeds()
+            if request.size > 0:
+                resp.odailyFeeds.extend(data[:request.size])
+            else:
+                resp.odailyFeeds.extend(data)
+        except Exception as e:
+            e.with_traceback()
             logger.error(e)
             resp.error = e.__str__()
 

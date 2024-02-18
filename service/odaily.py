@@ -1,3 +1,5 @@
+from datetime import datetime
+
 import requests
 
 from pb import spider_pb2
@@ -26,6 +28,13 @@ def get_odaily_feeds():
             odaily_feed.description = data['summary']
         if data.get('news_url') is not None:
             odaily_feed.reference_url = data['news_url']
+        if data.get('published_at') is not None:
+            date_format = "%Y-%m-%d %H:%M:%S"
+            # Convert date string to datetime object
+            dt = datetime.strptime(data['published_at'], date_format)
+            # Convert datetime object to timestamp
+            timestamp = int(dt.timestamp())
+            odaily_feed.published_at = timestamp
 
         feeds.append(odaily_feed)
     return feeds

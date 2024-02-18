@@ -92,6 +92,7 @@ message OdailyFeed{
   int64 id = 3;
   string description = 4;
   string url = 5;
+  int64  published_at = 6;
 }
 
 message CopilotResp{

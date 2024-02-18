@@ -82,18 +82,20 @@ class ZhihuHot(_message.Message):
     def __init__(self, title: _Optional[str] = ..., url: _Optional[str] = ..., excerpt: _Optional[str] = ..., rank: _Optional[int] = ..., created: _Optional[int] = ...) -> None: ...
 
 class OdailyFeed(_message.Message):
-    __slots__ = ["title", "reference_url", "id", "description", "url"]
+    __slots__ = ["title", "reference_url", "id", "description", "url", "published_at"]
     TITLE_FIELD_NUMBER: _ClassVar[int]
     REFERENCE_URL_FIELD_NUMBER: _ClassVar[int]
     ID_FIELD_NUMBER: _ClassVar[int]
     DESCRIPTION_FIELD_NUMBER: _ClassVar[int]
     URL_FIELD_NUMBER: _ClassVar[int]
+    PUBLISHED_AT_FIELD_NUMBER: _ClassVar[int]
     title: str
     reference_url: str
     id: int
     description: str
     url: str
-    def __init__(self, title: _Optional[str] = ..., reference_url: _Optional[str] = ..., id: _Optional[int] = ..., description: _Optional[str] = ..., url: _Optional[str] = ...) -> None: ...
+    published_at: int
+    def __init__(self, title: _Optional[str] = ..., reference_url: _Optional[str] = ..., id: _Optional[int] = ..., description: _Optional[str] = ..., url: _Optional[str] = ..., published_at: _Optional[int] = ...) -> None: ...
 
 class CopilotResp(_message.Message):
     __slots__ = ["content", "suggestions"]

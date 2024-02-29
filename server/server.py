@@ -7,6 +7,7 @@ from pb import spider_pb2, spider_pb2_grpc
 from service import bing_daily_img
 from service.bing_copilot import ask_copilot, ask_copilot_http
 from service.d36kr import get_36kr_hot
+from service.message_handler import recv_message
 from service.odaily import get_odaily_feeds
 from service.wallstreeet_news import get_wallstreet_news
 from service.weibo_hot import get_weibo_hot
@@ -131,6 +132,19 @@ class SpiderService(spider_pb2_grpc.SpiderServiceServicer):
         try:
             data = ask_copilot_http(request.prompt)
             resp.copilotResp.CopyFrom(data)
+        except Exception as e:
+            logger.error(e)
+            resp.error = e.__str__()
+        return resp
+
+    async def RecvMessage(
+            self,
+            request: spider_pb2.Message,
+            context: grpc.aio.ServicerContext,
+    ) -> spider_pb2.SpiderResp:
+        resp = spider_pb2.SpiderResp()
+        try:
+            recv_message(request)
         except Exception as e:
             logger.error(e)
             resp.error = e.__str__()

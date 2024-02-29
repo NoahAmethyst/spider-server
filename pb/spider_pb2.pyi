@@ -104,3 +104,26 @@ class CopilotResp(_message.Message):
     content: str
     suggestions: _containers.RepeatedScalarFieldContainer[str]
     def __init__(self, content: _Optional[str] = ..., suggestions: _Optional[_Iterable[str]] = ...) -> None: ...
+
+class Message(_message.Message):
+    __slots__ = ["title", "resource", "content", "reference_url", "img_urls", "references"]
+    class ReferencesEntry(_message.Message):
+        __slots__ = ["key", "value"]
+        KEY_FIELD_NUMBER: _ClassVar[int]
+        VALUE_FIELD_NUMBER: _ClassVar[int]
+        key: str
+        value: str
+        def __init__(self, key: _Optional[str] = ..., value: _Optional[str] = ...) -> None: ...
+    TITLE_FIELD_NUMBER: _ClassVar[int]
+    RESOURCE_FIELD_NUMBER: _ClassVar[int]
+    CONTENT_FIELD_NUMBER: _ClassVar[int]
+    REFERENCE_URL_FIELD_NUMBER: _ClassVar[int]
+    IMG_URLS_FIELD_NUMBER: _ClassVar[int]
+    REFERENCES_FIELD_NUMBER: _ClassVar[int]
+    title: str
+    resource: str
+    content: str
+    reference_url: str
+    img_urls: _containers.RepeatedScalarFieldContainer[str]
+    references: _containers.ScalarMap[str, str]
+    def __init__(self, title: _Optional[str] = ..., resource: _Optional[str] = ..., content: _Optional[str] = ..., reference_url: _Optional[str] = ..., img_urls: _Optional[_Iterable[str]] = ..., references: _Optional[_Mapping[str, str]] = ...) -> None: ...

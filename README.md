@@ -4,8 +4,6 @@
 
 #### Please submit issue if you have any question or advice.
 
-
-
 You can find all GRPC API from [proto file](protocol%2Fspider.proto).
 
 ----
@@ -21,6 +19,7 @@ You can find all GRPC API from [proto file](protocol%2Fspider.proto).
 | 36KR Hot                              | ☑️      |                                                                       |                              |||
 | Wall Street News                      | ☑️      |                                                                       |
 | ODaily News                           | ☑️      |                                                                       |
+| CaiXin News                           | ☑️      |                                                                       |
 
 
 

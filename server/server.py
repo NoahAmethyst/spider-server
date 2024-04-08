@@ -6,6 +6,7 @@ from grpc_reflection.v1alpha import reflection
 from pb import spider_pb2, spider_pb2_grpc
 from service import bing_daily_img
 from service.bing_copilot import ask_copilot, ask_copilot_http
+from service.caixin_news import get_caixin_news
 from service.d36kr import get_36kr_hot
 from service.message_handler import recv_message
 from service.odaily import get_odaily_feeds
@@ -116,6 +117,25 @@ class SpiderService(spider_pb2_grpc.SpiderServiceServicer):
                 resp.odailyFeeds.extend(data[:request.size])
             else:
                 resp.odailyFeeds.extend(data)
+        except Exception as e:
+            e.with_traceback()
+            logger.error(e)
+            resp.error = e.__str__()
+
+        return resp
+
+    async def CaiXinNews(
+            self,
+            request: spider_pb2.SpiderReq,
+            context: grpc.aio.ServicerContext,
+    ) -> spider_pb2.SpiderResp:
+        resp = spider_pb2.SpiderResp()
+        try:
+            data = get_caixin_news()
+            if request.size > 0:
+                resp.caiXinNews.extend(data[:request.size])
+            else:
+                resp.caiXinNews.extend(data)
         except Exception as e:
             e.with_traceback()
             logger.error(e)

@@ -21,14 +21,12 @@ def get_weibo_hot():
     soup = BeautifulSoup(response.content, "html.parser")
 
     all_data = []
-    title_cache = set()
     for i, selection in enumerate(soup.select(".td-02")):
         s = selection.find("a")
         url = s.get("href")
         text = s.get_text()
 
         if url and "weibo" in url:
-            title_cache.add(text)
             all_data.append({"title": text, "url": f"https://s.weibo.com{url}"})
 
     hot_list = []

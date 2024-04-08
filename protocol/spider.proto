@@ -35,6 +35,8 @@ service SpiderService {
 
   rpc AskCopilot(SpiderReq) returns(SpiderResp){}
 
+  rpc CaiXinNews(SpiderReq)returns(SpiderResp){}
+
   rpc RecvMessage(Message) returns(SpiderResp){}
 
 }
@@ -55,6 +57,7 @@ message SpiderResp {
   repeated WallStreetNew wallStreetNews = 4;
   repeated ZhihuHot zhihuHotList = 5;
   repeated OdailyFeed odailyFeeds = 6;
+  repeated CaiXinNew caiXinNews = 8;
   CopilotResp copilotResp = 7;
 }
 
@@ -100,6 +103,13 @@ message OdailyFeed{
 message CopilotResp{
   string content = 1;
   repeated string suggestions = 2;
+}
+
+message CaiXinNew{
+  string title = 1;
+  string description = 2;
+  string url = 3;
+  string domain = 4;
 }
 
 message Message{

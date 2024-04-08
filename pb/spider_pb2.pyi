@@ -16,7 +16,7 @@ class SpiderReq(_message.Message):
     def __init__(self, is_mobile: bool = ..., size: _Optional[int] = ..., prompt: _Optional[str] = ...) -> None: ...
 
 class SpiderResp(_message.Message):
-    __slots__ = ["url", "error", "weiboHotList", "d36KrHotList", "wallStreetNews", "zhihuHotList", "odailyFeeds", "copilotResp"]
+    __slots__ = ["url", "error", "weiboHotList", "d36KrHotList", "wallStreetNews", "zhihuHotList", "odailyFeeds", "caiXinNews", "copilotResp"]
     URL_FIELD_NUMBER: _ClassVar[int]
     ERROR_FIELD_NUMBER: _ClassVar[int]
     WEIBOHOTLIST_FIELD_NUMBER: _ClassVar[int]
@@ -24,6 +24,7 @@ class SpiderResp(_message.Message):
     WALLSTREETNEWS_FIELD_NUMBER: _ClassVar[int]
     ZHIHUHOTLIST_FIELD_NUMBER: _ClassVar[int]
     ODAILYFEEDS_FIELD_NUMBER: _ClassVar[int]
+    CAIXINNEWS_FIELD_NUMBER: _ClassVar[int]
     COPILOTRESP_FIELD_NUMBER: _ClassVar[int]
     url: str
     error: str
@@ -32,8 +33,9 @@ class SpiderResp(_message.Message):
     wallStreetNews: _containers.RepeatedCompositeFieldContainer[WallStreetNew]
     zhihuHotList: _containers.RepeatedCompositeFieldContainer[ZhihuHot]
     odailyFeeds: _containers.RepeatedCompositeFieldContainer[OdailyFeed]
+    caiXinNews: _containers.RepeatedCompositeFieldContainer[CaiXinNew]
     copilotResp: CopilotResp
-    def __init__(self, url: _Optional[str] = ..., error: _Optional[str] = ..., weiboHotList: _Optional[_Iterable[_Union[WeiboHot, _Mapping]]] = ..., d36KrHotList: _Optional[_Iterable[_Union[D36KrHot, _Mapping]]] = ..., wallStreetNews: _Optional[_Iterable[_Union[WallStreetNew, _Mapping]]] = ..., zhihuHotList: _Optional[_Iterable[_Union[ZhihuHot, _Mapping]]] = ..., odailyFeeds: _Optional[_Iterable[_Union[OdailyFeed, _Mapping]]] = ..., copilotResp: _Optional[_Union[CopilotResp, _Mapping]] = ...) -> None: ...
+    def __init__(self, url: _Optional[str] = ..., error: _Optional[str] = ..., weiboHotList: _Optional[_Iterable[_Union[WeiboHot, _Mapping]]] = ..., d36KrHotList: _Optional[_Iterable[_Union[D36KrHot, _Mapping]]] = ..., wallStreetNews: _Optional[_Iterable[_Union[WallStreetNew, _Mapping]]] = ..., zhihuHotList: _Optional[_Iterable[_Union[ZhihuHot, _Mapping]]] = ..., odailyFeeds: _Optional[_Iterable[_Union[OdailyFeed, _Mapping]]] = ..., caiXinNews: _Optional[_Iterable[_Union[CaiXinNew, _Mapping]]] = ..., copilotResp: _Optional[_Union[CopilotResp, _Mapping]] = ...) -> None: ...
 
 class WeiboHot(_message.Message):
     __slots__ = ["title", "url", "hot", "rank"]
@@ -104,6 +106,18 @@ class CopilotResp(_message.Message):
     content: str
     suggestions: _containers.RepeatedScalarFieldContainer[str]
     def __init__(self, content: _Optional[str] = ..., suggestions: _Optional[_Iterable[str]] = ...) -> None: ...
+
+class CaiXinNew(_message.Message):
+    __slots__ = ["title", "description", "url", "domain"]
+    TITLE_FIELD_NUMBER: _ClassVar[int]
+    DESCRIPTION_FIELD_NUMBER: _ClassVar[int]
+    URL_FIELD_NUMBER: _ClassVar[int]
+    DOMAIN_FIELD_NUMBER: _ClassVar[int]
+    title: str
+    description: str
+    url: str
+    domain: str
+    def __init__(self, title: _Optional[str] = ..., description: _Optional[str] = ..., url: _Optional[str] = ..., domain: _Optional[str] = ...) -> None: ...
 
 class Message(_message.Message):
     __slots__ = ["title", "resource", "content", "reference_url", "img_urls", "references"]

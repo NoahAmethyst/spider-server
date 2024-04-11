@@ -37,8 +37,6 @@ service SpiderService {
 
   rpc CaiXinNews(SpiderReq)returns(SpiderResp){}
 
-  rpc RecvMessage(Message) returns(SpiderResp){}
-
 }
 
 // The request message containing the user's name.
@@ -111,14 +109,3 @@ message CaiXinNew{
   string url = 3;
   string domain = 4;
 }
-
-message Message{
-  string title = 1;
-  string resource = 2;
-  string content = 3;
-  string reference_url = 4;
-  repeated string img_urls = 5;
-  map<string, string> references = 6;
-
-}
-

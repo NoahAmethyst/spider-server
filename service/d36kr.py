@@ -33,7 +33,6 @@ def get_36kr_hot():
         s = selection.find("a")
         url = s.get("href")
         text = s.get_text()
-
         if url:
             all_data.append({"title": text, "url": "https://36kr.com" + url})
 

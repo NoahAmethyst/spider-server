@@ -15,7 +15,6 @@ class CosCli:
         self.secret_key = os.environ.get('TC_SECRET_KEY')
         self.region = 'ap-nanjing'
         self.bucket = 'bot-1317156498'
-
     def __new__(cls, *args, **kwargs):
         if not isinstance(cls._instance, cls):
             cls._instance = super(CosCli, cls).__new__(cls, *args, **kwargs)

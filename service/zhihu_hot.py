@@ -1,10 +1,15 @@
+import os
+
 import requests
 from pb import spider_pb2
 
 
 def get_zhihu_hot():
     url = "https://www.zhihu.com/api/v3/feed/topstory/hot-lists/total?limit=100"
-    response = requests.get(url)
+    cookies = {
+        'z_c0': os.getenv('ZHIHU_AUTH')
+    }
+    response = requests.get(url=url, cookies=cookies)
 
     if response.status_code != 200:
         raise Exception(f"Error: {response.status_code}")

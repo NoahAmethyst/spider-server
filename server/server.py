@@ -45,7 +45,7 @@ class SpiderService(spider_pb2_grpc.SpiderServiceServicer):
             else:
                 resp.weiboHotList.extend(data)
         except Exception as e:
-            logger.error(e)
+            logger.error(f'Error fetch Weibo Hot:{e}')
             resp.error = e.__str__()
 
         return resp
@@ -63,7 +63,7 @@ class SpiderService(spider_pb2_grpc.SpiderServiceServicer):
             else:
                 resp.d36KrHotList.extend(data)
         except Exception as e:
-            logger.error(e)
+            logger.error(f'Error fetch 36Kr:{e}')
             resp.error = e.__str__()
 
         return resp
@@ -81,7 +81,7 @@ class SpiderService(spider_pb2_grpc.SpiderServiceServicer):
             else:
                 resp.wallStreetNews.extend(data)
         except Exception as e:
-            logger.error(e)
+            logger.error(f'Error fetch Wall Street news:{e}')
             resp.error = e.__str__()
 
         return resp
@@ -99,7 +99,7 @@ class SpiderService(spider_pb2_grpc.SpiderServiceServicer):
             else:
                 resp.zhihuHotList.extend(data)
         except Exception as e:
-            logger.error(e)
+            logger.error(f'Error fetch Zhihu:{e}')
             resp.error = e.__str__()
 
         return resp
@@ -117,8 +117,7 @@ class SpiderService(spider_pb2_grpc.SpiderServiceServicer):
             else:
                 resp.odailyFeeds.extend(data)
         except Exception as e:
-            e.with_traceback()
-            logger.error(e)
+            logger.error(f'Error fetching odaily feeds: {e}')
             resp.error = e.__str__()
 
         return resp
@@ -136,8 +135,7 @@ class SpiderService(spider_pb2_grpc.SpiderServiceServicer):
             else:
                 resp.caiXinNews.extend(data)
         except Exception as e:
-            e.with_traceback()
-            logger.error(e)
+            logger.error(f'Error fetching CaiXin News:{e}')
             resp.error = e.__str__()
 
         return resp
@@ -152,9 +150,10 @@ class SpiderService(spider_pb2_grpc.SpiderServiceServicer):
             data = ask_copilot_http(request.prompt)
             resp.copilotResp.CopyFrom(data)
         except Exception as e:
-            logger.error(e)
+            logger.error(f'Error Call Copilot:{e}')
             resp.error = e.__str__()
         return resp
+
 
 async def start(addr) -> None:
     server = grpc.aio.server(futures.ThreadPoolExecutor(max_workers=10))

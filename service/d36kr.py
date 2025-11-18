@@ -2,6 +2,7 @@ import requests
 from bs4 import BeautifulSoup
 
 from pb import spider_pb2
+from util.logger import logger
 
 
 def get_36kr_hot():
@@ -28,6 +29,8 @@ def get_36kr_hot():
         title = selection.find('h3', class_='chakra-text css-18us435').get_text(strip=True)
         all_data.append({"title": title, "url": "https://letschuhai.com" + link})
 
+    if all_data.__len__() == 0:
+        logger.warning(f'No 36Kr data found')
     data = []
     for i, _data in enumerate(all_data):
         _36KrHot = spider_pb2.D36KrHot()

@@ -30,7 +30,8 @@ def get_36kr_hot():
         all_data.append({"title": title, "url": "https://letschuhai.com" + link})
 
     if all_data.__len__() == 0:
-        logger.warning(f'No 36Kr data found')
+        logger.warning(f'No 36Kr data found,please check if url is valid')
+
     data = []
     for i, _data in enumerate(all_data):
         _36KrHot = spider_pb2.D36KrHot()

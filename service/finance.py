@@ -145,7 +145,7 @@ class FinanceJuheApi:
             return resp
 
         # 提取第一条汇率信息（通常是最相关的）
-        first_result = result_list[0]
+        first_result = result_list[0]['Au99.99']
         last_price = first_result.get("latestpri")
         resp.float_value = float(last_price)
         return resp

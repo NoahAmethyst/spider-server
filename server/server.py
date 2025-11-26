@@ -1,13 +1,14 @@
-import logging
 from concurrent import futures
 
 import grpc
 from grpc_reflection.v1alpha import reflection
+
 from pb import spider_pb2, spider_pb2_grpc
 from service import bing_daily_img
-from service.bing_copilot import ask_copilot, ask_copilot_http
+from service.bing_copilot import ask_copilot_http
 from service.caixin_news import get_caixin_news
 from service.d36kr import get_36kr_hot
+from service.finance import FinanceJuheApi
 from service.odaily import get_odaily_feeds
 from service.wallstreeet_news import get_wallstreet_news
 from service.weibo_hot import get_weibo_hot
@@ -151,6 +152,27 @@ class SpiderService(spider_pb2_grpc.SpiderServiceServicer):
             resp.copilotResp.CopyFrom(data)
         except Exception as e:
             logger.error(f'Error Call Copilot:{e}')
+            resp.error = e.__str__()
+        return resp
+
+    async def Finance(
+            self,
+            request: spider_pb2.SpiderReq,
+            context: grpc.aio.ServicerContext,
+    ) -> spider_pb2.SpiderResp:
+        resp = spider_pb2.SpiderResp()
+        try:
+
+            if request.finance_type == spider_pb2.FinanceType.EXCHANGE:
+                resp.finance_resp.CopyFrom(FinanceJuheApi().exchange_rate(request._from, request._to))
+            elif request.finance_type == spider_pb2.FinanceType.GOLD:
+                resp.finance_resp.CopyFrom(FinanceJuheApi().gold_price())
+            elif request.finance_type == spider_pb2.FinanceType.CURRENCY_LIST:
+                resp.finance_resp.CopyFrom(FinanceJuheApi().currency_list())
+
+
+        except Exception as e:
+            logger.error(f'Error Call Finance API:{e}')
             resp.error = e.__str__()
         return resp
 

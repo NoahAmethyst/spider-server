@@ -13,7 +13,7 @@ _sym_db = _symbol_database.Default()
 
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x0cspider.proto\x12\x05proto\"<\n\tSpiderReq\x12\x11\n\tis_mobile\x18\x01 \x01(\x08\x12\x0c\n\x04size\x18\x02 \x01(\x03\x12\x0e\n\x06prompt\x18\x03 \x01(\t\"\xc2\x02\n\nSpiderResp\x12\x0b\n\x03url\x18\x01 \x01(\t\x12\r\n\x05\x65rror\x18\n \x01(\t\x12%\n\x0cweiboHotList\x18\x02 \x03(\x0b\x32\x0f.proto.WeiboHot\x12%\n\x0c\x64\x33\x36KrHotList\x18\x03 \x03(\x0b\x32\x0f.proto.D36KrHot\x12,\n\x0ewallStreetNews\x18\x04 \x03(\x0b\x32\x14.proto.WallStreetNew\x12%\n\x0czhihuHotList\x18\x05 \x03(\x0b\x32\x0f.proto.ZhihuHot\x12&\n\x0bodailyFeeds\x18\x06 \x03(\x0b\x32\x11.proto.OdailyFeed\x12$\n\ncaiXinNews\x18\x08 \x03(\x0b\x32\x10.proto.CaiXinNew\x12\'\n\x0b\x63opilotResp\x18\x07 \x01(\x0b\x32\x12.proto.CopilotResp\"A\n\x08WeiboHot\x12\r\n\x05title\x18\x01 \x01(\t\x12\x0b\n\x03url\x18\x02 \x01(\t\x12\x0b\n\x03hot\x18\x03 \x01(\x03\x12\x0c\n\x04rank\x18\x04 \x01(\x03\"4\n\x08\x44\x33\x36KrHot\x12\r\n\x05title\x18\x01 \x01(\t\x12\x0b\n\x03url\x18\x02 \x01(\t\x12\x0c\n\x04rank\x18\x03 \x01(\x03\"<\n\rWallStreetNew\x12\r\n\x05title\x18\x01 \x01(\t\x12\x0b\n\x03url\x18\x02 \x01(\t\x12\x0f\n\x07\x63ontent\x18\x03 \x01(\t\"V\n\x08ZhihuHot\x12\r\n\x05title\x18\x01 \x01(\t\x12\x0b\n\x03url\x18\x02 \x01(\t\x12\x0f\n\x07\x65xcerpt\x18\x03 \x01(\t\x12\x0c\n\x04rank\x18\x04 \x01(\x03\x12\x0f\n\x07\x63reated\x18\x05 \x01(\x03\"v\n\nOdailyFeed\x12\r\n\x05title\x18\x01 \x01(\t\x12\x15\n\rreference_url\x18\x02 \x01(\t\x12\n\n\x02id\x18\x03 \x01(\x03\x12\x13\n\x0b\x64\x65scription\x18\x04 \x01(\t\x12\x0b\n\x03url\x18\x05 \x01(\t\x12\x14\n\x0cpublished_at\x18\x06 \x01(\x03\"3\n\x0b\x43opilotResp\x12\x0f\n\x07\x63ontent\x18\x01 \x01(\t\x12\x13\n\x0bsuggestions\x18\x02 \x03(\t\"L\n\tCaiXinNew\x12\r\n\x05title\x18\x01 \x01(\t\x12\x13\n\x0b\x64\x65scription\x18\x02 \x01(\t\x12\x0b\n\x03url\x18\x03 \x01(\t\x12\x0e\n\x06\x64omain\x18\x04 \x01(\t2\xfb\x03\n\rSpiderService\x12;\n\x12GetCNBingWallPaper\x12\x10.proto.SpiderReq\x1a\x11.proto.SpiderResp\"\x00\x12;\n\x12GetUSBingWallPaper\x12\x10.proto.SpiderReq\x1a\x11.proto.SpiderResp\"\x00\x12\x31\n\x08WeiboHot\x12\x10.proto.SpiderReq\x1a\x11.proto.SpiderResp\"\x00\x12\x31\n\x08\x44\x33\x36KrHot\x12\x10.proto.SpiderReq\x1a\x11.proto.SpiderResp\"\x00\x12\x37\n\x0eWallStreetNews\x12\x10.proto.SpiderReq\x1a\x11.proto.SpiderResp\"\x00\x12\x31\n\x08ZhihuHot\x12\x10.proto.SpiderReq\x1a\x11.proto.SpiderResp\"\x00\x12\x34\n\x0bOdailyFeeds\x12\x10.proto.SpiderReq\x1a\x11.proto.SpiderResp\"\x00\x12\x33\n\nAskCopilot\x12\x10.proto.SpiderReq\x1a\x11.proto.SpiderResp\"\x00\x12\x33\n\nCaiXinNews\x12\x10.proto.SpiderReq\x1a\x11.proto.SpiderResp\"\x00\x42\x16Z\x14spider_pb/;spider_pbb\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x0cspider.proto\x12\x05proto\"\x82\x01\n\tSpiderReq\x12\x11\n\tis_mobile\x18\x01 \x01(\x08\x12\x0c\n\x04size\x18\x02 \x01(\x03\x12\x0e\n\x06prompt\x18\x03 \x01(\t\x12(\n\x0c\x66inance_type\x18\x04 \x01(\x0e\x32\x12.proto.FinanceType\x12\r\n\x05_from\x18\x05 \x01(\t\x12\x0b\n\x03_to\x18\x06 \x01(\t\"\xec\x02\n\nSpiderResp\x12\x0b\n\x03url\x18\x01 \x01(\t\x12\r\n\x05\x65rror\x18\n \x01(\t\x12%\n\x0cweiboHotList\x18\x02 \x03(\x0b\x32\x0f.proto.WeiboHot\x12%\n\x0c\x64\x33\x36KrHotList\x18\x03 \x03(\x0b\x32\x0f.proto.D36KrHot\x12,\n\x0ewallStreetNews\x18\x04 \x03(\x0b\x32\x14.proto.WallStreetNew\x12%\n\x0czhihuHotList\x18\x05 \x03(\x0b\x32\x0f.proto.ZhihuHot\x12&\n\x0bodailyFeeds\x18\x06 \x03(\x0b\x32\x11.proto.OdailyFeed\x12\'\n\x0b\x63opilotResp\x18\x07 \x01(\x0b\x32\x12.proto.CopilotResp\x12$\n\ncaiXinNews\x18\x08 \x03(\x0b\x32\x10.proto.CaiXinNew\x12(\n\x0c\x66inance_resp\x18\t \x01(\x0b\x32\x12.proto.FinanceResp\"A\n\x08WeiboHot\x12\r\n\x05title\x18\x01 \x01(\t\x12\x0b\n\x03url\x18\x02 \x01(\t\x12\x0b\n\x03hot\x18\x03 \x01(\x03\x12\x0c\n\x04rank\x18\x04 \x01(\x03\"4\n\x08\x44\x33\x36KrHot\x12\r\n\x05title\x18\x01 \x01(\t\x12\x0b\n\x03url\x18\x02 \x01(\t\x12\x0c\n\x04rank\x18\x03 \x01(\x03\"<\n\rWallStreetNew\x12\r\n\x05title\x18\x01 \x01(\t\x12\x0b\n\x03url\x18\x02 \x01(\t\x12\x0f\n\x07\x63ontent\x18\x03 \x01(\t\"V\n\x08ZhihuHot\x12\r\n\x05title\x18\x01 \x01(\t\x12\x0b\n\x03url\x18\x02 \x01(\t\x12\x0f\n\x07\x65xcerpt\x18\x03 \x01(\t\x12\x0c\n\x04rank\x18\x04 \x01(\x03\x12\x0f\n\x07\x63reated\x18\x05 \x01(\x03\"v\n\nOdailyFeed\x12\r\n\x05title\x18\x01 \x01(\t\x12\x15\n\rreference_url\x18\x02 \x01(\t\x12\n\n\x02id\x18\x03 \x01(\x03\x12\x13\n\x0b\x64\x65scription\x18\x04 \x01(\t\x12\x0b\n\x03url\x18\x05 \x01(\t\x12\x14\n\x0cpublished_at\x18\x06 \x01(\x03\"3\n\x0b\x43opilotResp\x12\x0f\n\x07\x63ontent\x18\x01 \x01(\t\x12\x13\n\x0bsuggestions\x18\x02 \x03(\t\"L\n\tCaiXinNew\x12\r\n\x05title\x18\x01 \x01(\t\x12\x13\n\x0b\x64\x65scription\x18\x02 \x01(\t\x12\x0b\n\x03url\x18\x03 \x01(\t\x12\x0e\n\x06\x64omain\x18\x04 \x01(\t\"4\n\x0b\x46inanceResp\x12\x13\n\x0b\x66loat_value\x18\x01 \x01(\x02\x12\x10\n\x08str_list\x18\x02 \x03(\t*E\n\x0b\x46inanceType\x12\x0b\n\x07UNKNOWN\x10\x00\x12\x08\n\x04GOLD\x10\x01\x12\x0c\n\x08\x45XCHANGE\x10\x02\x12\x11\n\rCURRENCY_LIST\x10\x03\x32\xad\x04\n\rSpiderService\x12;\n\x12GetCNBingWallPaper\x12\x10.proto.SpiderReq\x1a\x11.proto.SpiderResp\"\x00\x12;\n\x12GetUSBingWallPaper\x12\x10.proto.SpiderReq\x1a\x11.proto.SpiderResp\"\x00\x12\x31\n\x08WeiboHot\x12\x10.proto.SpiderReq\x1a\x11.proto.SpiderResp\"\x00\x12\x31\n\x08\x44\x33\x36KrHot\x12\x10.proto.SpiderReq\x1a\x11.proto.SpiderResp\"\x00\x12\x37\n\x0eWallStreetNews\x12\x10.proto.SpiderReq\x1a\x11.proto.SpiderResp\"\x00\x12\x31\n\x08ZhihuHot\x12\x10.proto.SpiderReq\x1a\x11.proto.SpiderResp\"\x00\x12\x34\n\x0bOdailyFeeds\x12\x10.proto.SpiderReq\x1a\x11.proto.SpiderResp\"\x00\x12\x33\n\nAskCopilot\x12\x10.proto.SpiderReq\x1a\x11.proto.SpiderResp\"\x00\x12\x33\n\nCaiXinNews\x12\x10.proto.SpiderReq\x1a\x11.proto.SpiderResp\"\x00\x12\x30\n\x07\x46inance\x12\x10.proto.SpiderReq\x1a\x11.proto.SpiderResp\"\x00\x42\x16Z\x14spider_pb/;spider_pbb\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
@@ -21,24 +21,28 @@ _builder.BuildTopDescriptorsAndMessages(DESCRIPTOR, 'spider_pb2', _globals)
 if _descriptor._USE_C_DESCRIPTORS == False:
   DESCRIPTOR._options = None
   DESCRIPTOR._serialized_options = b'Z\024spider_pb/;spider_pb'
-  _globals['_SPIDERREQ']._serialized_start=23
-  _globals['_SPIDERREQ']._serialized_end=83
-  _globals['_SPIDERRESP']._serialized_start=86
-  _globals['_SPIDERRESP']._serialized_end=408
-  _globals['_WEIBOHOT']._serialized_start=410
-  _globals['_WEIBOHOT']._serialized_end=475
-  _globals['_D36KRHOT']._serialized_start=477
-  _globals['_D36KRHOT']._serialized_end=529
-  _globals['_WALLSTREETNEW']._serialized_start=531
-  _globals['_WALLSTREETNEW']._serialized_end=591
-  _globals['_ZHIHUHOT']._serialized_start=593
-  _globals['_ZHIHUHOT']._serialized_end=679
-  _globals['_ODAILYFEED']._serialized_start=681
-  _globals['_ODAILYFEED']._serialized_end=799
-  _globals['_COPILOTRESP']._serialized_start=801
-  _globals['_COPILOTRESP']._serialized_end=852
-  _globals['_CAIXINNEW']._serialized_start=854
-  _globals['_CAIXINNEW']._serialized_end=930
-  _globals['_SPIDERSERVICE']._serialized_start=933
-  _globals['_SPIDERSERVICE']._serialized_end=1440
+  _globals['_FINANCETYPE']._serialized_start=1099
+  _globals['_FINANCETYPE']._serialized_end=1168
+  _globals['_SPIDERREQ']._serialized_start=24
+  _globals['_SPIDERREQ']._serialized_end=154
+  _globals['_SPIDERRESP']._serialized_start=157
+  _globals['_SPIDERRESP']._serialized_end=521
+  _globals['_WEIBOHOT']._serialized_start=523
+  _globals['_WEIBOHOT']._serialized_end=588
+  _globals['_D36KRHOT']._serialized_start=590
+  _globals['_D36KRHOT']._serialized_end=642
+  _globals['_WALLSTREETNEW']._serialized_start=644
+  _globals['_WALLSTREETNEW']._serialized_end=704
+  _globals['_ZHIHUHOT']._serialized_start=706
+  _globals['_ZHIHUHOT']._serialized_end=792
+  _globals['_ODAILYFEED']._serialized_start=794
+  _globals['_ODAILYFEED']._serialized_end=912
+  _globals['_COPILOTRESP']._serialized_start=914
+  _globals['_COPILOTRESP']._serialized_end=965
+  _globals['_CAIXINNEW']._serialized_start=967
+  _globals['_CAIXINNEW']._serialized_end=1043
+  _globals['_FINANCERESP']._serialized_start=1045
+  _globals['_FINANCERESP']._serialized_end=1097
+  _globals['_SPIDERSERVICE']._serialized_start=1171
+  _globals['_SPIDERSERVICE']._serialized_end=1728
 # @@protoc_insertion_point(module_scope)

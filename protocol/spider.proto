@@ -13,99 +13,119 @@
 // limitations under the License.
 
 syntax = "proto3";
+
 option go_package = "spider_pb/;spider_pb";
+
 package proto;
 
 // The greeting service definition.
 service SpiderService {
-  // Sends a greeting
-  rpc GetCNBingWallPaper (SpiderReq) returns (SpiderResp) {}
+    // Sends a greeting
+    rpc GetCNBingWallPaper (SpiderReq) returns (SpiderResp) {}
 
-  rpc GetUSBingWallPaper (SpiderReq) returns (SpiderResp) {}
+    rpc GetUSBingWallPaper (SpiderReq) returns (SpiderResp) {}
 
-  rpc WeiboHot(SpiderReq) returns (SpiderResp){}
+    rpc WeiboHot (SpiderReq) returns (SpiderResp) {}
 
-  rpc D36KrHot(SpiderReq) returns (SpiderResp){}
+    rpc D36KrHot (SpiderReq) returns (SpiderResp) {}
 
-  rpc WallStreetNews(SpiderReq) returns (SpiderResp){}
+    rpc WallStreetNews (SpiderReq) returns (SpiderResp) {}
 
-  rpc ZhihuHot(SpiderReq) returns (SpiderResp){}
+    rpc ZhihuHot (SpiderReq) returns (SpiderResp) {}
 
-  rpc OdailyFeeds(SpiderReq) returns(SpiderResp){}
+    rpc OdailyFeeds (SpiderReq) returns (SpiderResp) {}
 
-  rpc AskCopilot(SpiderReq) returns(SpiderResp){}
+    rpc AskCopilot (SpiderReq) returns (SpiderResp) {}
 
-  rpc CaiXinNews(SpiderReq)returns(SpiderResp){}
+    rpc CaiXinNews (SpiderReq) returns (SpiderResp) {}
+
+    rpc Finance (SpiderReq) returns (SpiderResp) {}
 
 }
 
 // The request message containing the user's name.
 message SpiderReq {
-  bool is_mobile = 1;
-  int64 size = 2;
-  string prompt = 3;
+    bool is_mobile = 1;
+    int64 size = 2;
+    string prompt = 3;
+    FinanceType finance_type = 4;
+    string _from = 5;
+    string _to = 6;
 }
 
 // The response message containing the greetings
 message SpiderResp {
-  string url = 1;
-  string error = 10;
-  repeated WeiboHot weiboHotList = 2;
-  repeated D36KrHot d36KrHotList = 3;
-  repeated WallStreetNew wallStreetNews = 4;
-  repeated ZhihuHot zhihuHotList = 5;
-  repeated OdailyFeed odailyFeeds = 6;
-  repeated CaiXinNew caiXinNews = 8;
-  CopilotResp copilotResp = 7;
+    string url = 1;
+    string error = 10;
+    repeated WeiboHot weiboHotList = 2;
+    repeated D36KrHot d36KrHotList = 3;
+    repeated WallStreetNew wallStreetNews = 4;
+    repeated ZhihuHot zhihuHotList = 5;
+    repeated OdailyFeed odailyFeeds = 6;
+    CopilotResp copilotResp = 7;
+    repeated CaiXinNew caiXinNews = 8;
+    FinanceResp finance_resp = 9;
 }
 
-message WeiboHot{
-  string title = 1;
-  string url = 2;
-  int64 hot = 3;
-  int64 rank = 4;
+message WeiboHot {
+    string title = 1;
+    string url = 2;
+    int64 hot = 3;
+    int64 rank = 4;
 
 }
 
-message D36KrHot{
-  string title = 1;
-  string url = 2;
-  int64 rank = 3;
-}
-
-
-message WallStreetNew{
-  string title = 1;
-  string url = 2;
-  string content = 3;
+message D36KrHot {
+    string title = 1;
+    string url = 2;
+    int64 rank = 3;
 }
 
 
-message ZhihuHot{
-  string title = 1;
-  string url = 2;
-  string excerpt = 3;
-  int64 rank = 4;
-  int64 created = 5;
+message WallStreetNew {
+    string title = 1;
+    string url = 2;
+    string content = 3;
 }
 
-message OdailyFeed{
-  string title = 1;
-  string reference_url = 2;
-  int64 id = 3;
-  string description = 4;
-  string url = 5;
-  int64  published_at = 6;
+
+message ZhihuHot {
+    string title = 1;
+    string url = 2;
+    string excerpt = 3;
+    int64 rank = 4;
+    int64 created = 5;
 }
 
-message CopilotResp{
-  string content = 1;
-  repeated string suggestions = 2;
+message OdailyFeed {
+    string title = 1;
+    string reference_url = 2;
+    int64 id = 3;
+    string description = 4;
+    string url = 5;
+    int64 published_at = 6;
 }
 
-message CaiXinNew{
-  string title = 1;
-  string description = 2;
-  string url = 3;
-  string domain = 4;
+message CopilotResp {
+    string content = 1;
+    repeated string suggestions = 2;
+}
+
+message CaiXinNew {
+    string title = 1;
+    string description = 2;
+    string url = 3;
+    string domain = 4;
+}
+
+message FinanceResp {
+    float float_value = 1;
+    repeated string str_list = 2;
+}
+
+enum FinanceType {
+    UNKNOWN = 0;
+    GOLD = 1;
+    EXCHANGE = 2;
+    CURRENCY_LIST = 3;
 }

@@ -2,12 +2,13 @@ import os
 
 import requests
 from pb import spider_pb2
+from util.config import EnvConfig
 
 
 def get_zhihu_hot():
     url = "https://www.zhihu.com/api/v3/feed/topstory/hot-lists/total?limit=100"
     cookies = {
-        'z_c0': os.getenv('ZHIHU_AUTH')
+        'z_c0': EnvConfig.zhihu_auth()
     }
     response = requests.get(url=url, cookies=cookies)
 

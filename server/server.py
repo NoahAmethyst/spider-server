@@ -164,7 +164,8 @@ class SpiderService(spider_pb2_grpc.SpiderServiceServicer):
         try:
 
             if request.finance_type == spider_pb2.FinanceType.EXCHANGE:
-                resp.finance_resp.CopyFrom(FinanceJuheApi().exchange_rate(request._from, request._to))
+                resp.finance_resp.CopyFrom(FinanceJuheApi().exchange_rate(FinanceJuheApi().currency_code(request._from),
+                                                                          FinanceJuheApi().currency_code(request._to)))
             elif request.finance_type == spider_pb2.FinanceType.GOLD:
                 resp.finance_resp.CopyFrom(FinanceJuheApi().gold_price())
             elif request.finance_type == spider_pb2.FinanceType.CURRENCY_LIST:

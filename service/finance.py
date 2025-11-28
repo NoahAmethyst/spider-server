@@ -104,6 +104,9 @@ class FinanceJuheApi:
             "智利比索": "CLP"
         }
 
+    def currency_code(self, zh: str) -> str:
+        return self.currency_map.get(zh)
+
     def currency_list(self) -> FinanceResp:
         resp = spider_pb2.FinanceResp()
         resp.str_list.extend(list(self.currency_map.keys()))

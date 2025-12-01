@@ -16,11 +16,12 @@ You can find all GRPC API from [proto file](protocol%2Fspider.proto).
 | Upload wallpaper to Tencent COS daily | ☑️      | You should setup your own Tencent Cloud config                        |
 | Weibo Hot                             | ☑️      |                                                                       |
 | Zhihu Hot                             | ☑️      |                                                                       |
-| 36KR Hot                              | ☑️      |                                                                       |                              |||
+| 36KR Hot                              | ☑️      |                                                                       |                              
 | Wall Street News                      | ☑️      |                                                                       |
 | ODaily News                           | ☑️      |                                                                       |
 | CaiXin News                           | ☑️      |                                                                       |
-
+| Latest Gold Price                     | ☑️      |                                                                       |
+| Currency Exchange rate                | ☑️      |                                                                       |
 
 
 

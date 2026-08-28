@@ -31,6 +31,10 @@ def test_weibo_hot_exposes_repeated_tags():
     assert list(hot.tags) == ["爆", "新"]
 
 
+def test_weibo_hot_targets_my_hot_category():
+    assert weibo_hot.WEIBO_TOP_URL == "https://s.weibo.com/top/summary?cate=recommend"
+
+
 def test_parser_preserves_raw_rank_heat_and_all_tags():
     rows = weibo_hot.parse_weibo_hot_html(WEIBO_HOT_HTML)
 

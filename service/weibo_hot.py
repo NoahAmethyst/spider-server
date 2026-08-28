@@ -7,7 +7,7 @@ from bs4 import BeautifulSoup
 from pb import spider_pb2
 
 
-WEIBO_TOP_URL = "https://s.weibo.com/top/summary?cate=realtimehot"
+WEIBO_TOP_URL = "https://s.weibo.com/top/summary?cate=recommend"
 WEIBO_BASE_URL = "https://s.weibo.com"
 REQUEST_TIMEOUT_SECONDS = 20
 USER_AGENT = (

@@ -1,5 +1,6 @@
 import pytest
 import requests
+import importlib
 
 from pb import spider_pb2
 from service import weibo_hot
@@ -29,6 +30,10 @@ def test_weibo_hot_exposes_repeated_tags():
     hot = spider_pb2.WeiboHot(tags=["爆", "新"])
 
     assert list(hot.tags) == ["爆", "新"]
+
+
+def test_server_module_imports_generated_grpc_stubs():
+    assert importlib.import_module("server.server")
 
 
 def test_weibo_hot_targets_my_hot_category():

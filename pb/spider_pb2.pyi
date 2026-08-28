@@ -58,16 +58,18 @@ class SpiderResp(_message.Message):
     def __init__(self, url: _Optional[str] = ..., error: _Optional[str] = ..., weiboHotList: _Optional[_Iterable[_Union[WeiboHot, _Mapping]]] = ..., d36KrHotList: _Optional[_Iterable[_Union[D36KrHot, _Mapping]]] = ..., wallStreetNews: _Optional[_Iterable[_Union[WallStreetNew, _Mapping]]] = ..., zhihuHotList: _Optional[_Iterable[_Union[ZhihuHot, _Mapping]]] = ..., odailyFeeds: _Optional[_Iterable[_Union[OdailyFeed, _Mapping]]] = ..., copilotResp: _Optional[_Union[CopilotResp, _Mapping]] = ..., caiXinNews: _Optional[_Iterable[_Union[CaiXinNew, _Mapping]]] = ..., finance_resp: _Optional[_Union[FinanceResp, _Mapping]] = ...) -> None: ...
 
 class WeiboHot(_message.Message):
-    __slots__ = ["title", "url", "hot", "rank"]
+    __slots__ = ["title", "url", "hot", "rank", "tags"]
     TITLE_FIELD_NUMBER: _ClassVar[int]
     URL_FIELD_NUMBER: _ClassVar[int]
     HOT_FIELD_NUMBER: _ClassVar[int]
     RANK_FIELD_NUMBER: _ClassVar[int]
+    TAGS_FIELD_NUMBER: _ClassVar[int]
     title: str
     url: str
     hot: int
     rank: int
-    def __init__(self, title: _Optional[str] = ..., url: _Optional[str] = ..., hot: _Optional[int] = ..., rank: _Optional[int] = ...) -> None: ...
+    tags: _containers.RepeatedScalarFieldContainer[str]
+    def __init__(self, title: _Optional[str] = ..., url: _Optional[str] = ..., hot: _Optional[int] = ..., rank: _Optional[int] = ..., tags: _Optional[_Iterable[str]] = ...) -> None: ...
 
 class D36KrHot(_message.Message):
     __slots__ = ["title", "url", "rank"]

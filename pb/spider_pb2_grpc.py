@@ -2,7 +2,7 @@
 """Client and server classes corresponding to protobuf-defined services."""
 import grpc
 
-from pb import spider_pb2 as spider__pb2
+import spider_pb2 as spider__pb2
 
 
 class SpiderServiceStub(object):

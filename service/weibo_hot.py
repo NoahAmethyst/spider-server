@@ -1,41 +1,75 @@
+import os
+from urllib.parse import urljoin
+
 import requests
 from bs4 import BeautifulSoup
 
 from pb import spider_pb2
 
 
-def get_weibo_hot():
-    cookie = 'SUB=_2AkMVWDYUf8NxqwJRmP0Sz2_hZYt2zw_EieKjBMfPJRMxHRl-yj9jqkBStRB6PtgY-38i0AF7nDAv8HdY1ZwT3Rv8B5e5; SUBP=0033WrSXqPxfM72-Ws9jqgMF55529P9D9WFencmWZyNhNlrzI6f0SiqP'
-    agent = 'Mozilla / 5.0(X11;Linuxx86_64) AppleWebKit / 537.36(KHTML, likeGecko) Chrome / 74.0.3729.169Safari / 537.36'
-    url = "https://s.weibo.com/top/summary?cate=realtimehot"
-    headers = {
-        "User-Agent": agent,
-        "Cookie": cookie,
-    }
+WEIBO_TOP_URL = "https://s.weibo.com/top/summary?cate=recommend"
+WEIBO_BASE_URL = "https://s.weibo.com"
+REQUEST_TIMEOUT_SECONDS = 20
+USER_AGENT = (
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
+    "AppleWebKit/537.36 (KHTML, like Gecko) "
+    "Chrome/138.0.0.0 Safari/537.36"
+)
 
-    response = requests.get(url, headers=headers, timeout=120)
 
-    if response.status_code != 200:
-        raise Exception("Request failed with status code: ", response.status_code)
-
-    soup = BeautifulSoup(response.content, "html.parser")
-
-    all_data = []
-    for i, selection in enumerate(soup.select(".td-02")):
-        s = selection.find("a")
-        url = s.get("href")
-        text = s.get_text()
-
-        if url and "weibo" in url:
-            all_data.append({"title": text, "url": f"https://s.weibo.com{url}"})
-
+def parse_weibo_hot_html(content: bytes) -> list[spider_pb2.WeiboHot]:
+    soup = BeautifulSoup(content, "html.parser")
     hot_list = []
 
-    for i, data in enumerate(all_data):
-        weibo_hot = spider_pb2.WeiboHot()
-        weibo_hot.url = data['url']
-        weibo_hot.rank = i + 1
-        weibo_hot.title = data['title']
-        hot_list.append(weibo_hot)
+    for row in soup.select("tr"):
+        rank_cell = row.select_one(".td-01")
+        content_cell = row.select_one(".td-02")
+        link = content_cell.find("a", href=True) if content_cell else None
+        rank_text = rank_cell.get_text(strip=True) if rank_cell else ""
+
+        if not (link and rank_text.isdigit()):
+            continue
+
+        heat = 0
+        for span in reversed(content_cell.find_all("span")):
+            value = span.get_text(strip=True).replace(",", "")
+            if value.isdigit():
+                heat = int(value)
+                break
+
+        item = spider_pb2.WeiboHot(
+            title=link.get_text(strip=True),
+            url=urljoin(WEIBO_BASE_URL, link["href"]),
+            hot=heat,
+            rank=int(rank_text),
+        )
+        tags = []
+        for element in content_cell.find_all(["span", "i", "em"]):
+            if element.find_parent("a"):
+                continue
+            value = element.get_text(strip=True)
+            if value and not value.replace(",", "").isdigit() and value not in tags:
+                tags.append(value)
+        item.tags.extend(tags)
+        hot_list.append(item)
+
+    if not hot_list:
+        raise ValueError("Weibo hot-list HTML contains no ranking rows")
 
     return hot_list
+
+
+def get_weibo_hot():
+    headers = {"User-Agent": USER_AGENT}
+    cookie = os.getenv("WEIBO_COOKIE")
+    if cookie:
+        headers["Cookie"] = cookie
+
+    response = requests.get(
+        WEIBO_TOP_URL,
+        headers=headers,
+        timeout=REQUEST_TIMEOUT_SECONDS,
+    )
+    response.raise_for_status()
+
+    return parse_weibo_hot_html(response.content)

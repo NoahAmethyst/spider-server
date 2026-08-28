@@ -34,5 +34,7 @@ jobs:
           context: .
           platforms: linux/amd64
           push: true
+          provenance: false
+          sbom: false
           tags: |
             registry.cn-hangzhou.aliyuncs.com/lexmargin/spider:latest

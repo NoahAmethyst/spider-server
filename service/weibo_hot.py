@@ -43,11 +43,14 @@ def parse_weibo_hot_html(content: bytes) -> list[spider_pb2.WeiboHot]:
             hot=heat,
             rank=int(rank_text),
         )
-        item.tags.extend(
-            tag.get_text(strip=True)
-            for tag in content_cell.select(".icon-txt")
-            if tag.get_text(strip=True)
-        )
+        tags = []
+        for element in content_cell.find_all(["span", "i", "em"]):
+            if element.find_parent("a"):
+                continue
+            value = element.get_text(strip=True)
+            if value and not value.replace(",", "").isdigit() and value not in tags:
+                tags.append(value)
+        item.tags.extend(tags)
         hot_list.append(item)
 
     if not hot_list:

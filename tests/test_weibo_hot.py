@@ -51,6 +51,23 @@ def test_parser_rejects_visitor_html():
         weibo_hot.parse_weibo_hot_html(b"<html><title>Sina Visitor System</title></html>")
 
 
+def test_parser_preserves_unclassed_status_tags():
+    html = """
+    <table><tr>
+      <td class="td-01">12</td>
+      <td class="td-02">
+        <a href="/weibo?q=%23%E7%83%AD%E6%90%9C%23">热搜词条</a>
+        <span>456789</span><span>当前爆词</span><span>04:06登顶</span>
+      </td>
+    </tr></table>
+    """.encode()
+
+    [row] = weibo_hot.parse_weibo_hot_html(html)
+
+    assert row.hot == 456789
+    assert list(row.tags) == ["当前爆词", "04:06登顶"]
+
+
 class FakeResponse:
     def __init__(self, content=WEIBO_HOT_HTML):
         self.content = content

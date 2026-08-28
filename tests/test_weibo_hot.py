@@ -1,6 +1,10 @@
 import pytest
 import requests
 import importlib
+import os
+import subprocess
+import sys
+from pathlib import Path
 
 from pb import spider_pb2
 from service import weibo_hot
@@ -34,6 +38,21 @@ def test_weibo_hot_exposes_repeated_tags():
 
 def test_server_module_imports_generated_grpc_stubs():
     assert importlib.import_module("server.server")
+
+
+def test_protocol_generation_script_runs_from_project_root():
+    project_root = Path(__file__).resolve().parents[1]
+    environment = os.environ | {"PYTHON_BIN": sys.executable}
+
+    result = subprocess.run(
+        ["bash", "protocol/gen.sh"],
+        cwd=project_root,
+        env=environment,
+        capture_output=True,
+        text=True,
+    )
+
+    assert result.returncode == 0, result.stderr
 
 
 def test_weibo_hot_targets_my_hot_category():

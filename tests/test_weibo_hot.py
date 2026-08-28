@@ -1,4 +1,5 @@
 import pytest
+import requests
 
 from pb import spider_pb2
 from service import weibo_hot
@@ -44,3 +45,55 @@ def test_parser_preserves_raw_rank_heat_and_all_tags():
 def test_parser_rejects_visitor_html():
     with pytest.raises(ValueError, match="no ranking rows"):
         weibo_hot.parse_weibo_hot_html(b"<html><title>Sina Visitor System</title></html>")
+
+
+class FakeResponse:
+    def __init__(self, content=WEIBO_HOT_HTML):
+        self.content = content
+
+    def raise_for_status(self):
+        return None
+
+
+def test_get_weibo_hot_omits_cookie_when_not_configured(monkeypatch):
+    requested = {}
+
+    def fake_get(url, **kwargs):
+        requested["url"] = url
+        requested.update(kwargs)
+        return FakeResponse()
+
+    monkeypatch.delenv("WEIBO_COOKIE", raising=False)
+    monkeypatch.setattr(weibo_hot.requests, "get", fake_get)
+
+    weibo_hot.get_weibo_hot()
+
+    assert requested["url"] == weibo_hot.WEIBO_TOP_URL
+    assert "Cookie" not in requested["headers"]
+    assert requested["timeout"] == weibo_hot.REQUEST_TIMEOUT_SECONDS
+
+
+def test_get_weibo_hot_uses_configured_cookie(monkeypatch):
+    requested = {}
+
+    def fake_get(_url, **kwargs):
+        requested.update(kwargs)
+        return FakeResponse()
+
+    monkeypatch.setenv("WEIBO_COOKIE", "session=value")
+    monkeypatch.setattr(weibo_hot.requests, "get", fake_get)
+
+    weibo_hot.get_weibo_hot()
+
+    assert requested["headers"]["Cookie"] == "session=value"
+
+
+def test_get_weibo_hot_raises_http_error_for_non_success_response(monkeypatch):
+    response = requests.Response()
+    response.status_code = 403
+    response.url = weibo_hot.WEIBO_TOP_URL
+    response._content = b"forbidden"
+    monkeypatch.setattr(weibo_hot.requests, "get", lambda *_args, **_kwargs: response)
+
+    with pytest.raises(requests.HTTPError):
+        weibo_hot.get_weibo_hot()

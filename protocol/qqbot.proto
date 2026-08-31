@@ -1,0 +1,15 @@
+syntax = "proto3";
+
+package proto;
+
+service QQBotService {
+  rpc Notify(NotifyReq) returns (Resp) {}
+}
+
+message NotifyReq {
+  string content = 1;
+}
+
+message Resp {
+  string message = 1;
+}

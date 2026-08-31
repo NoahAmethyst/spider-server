@@ -1,7 +1,8 @@
 from datetime import datetime, timedelta, timezone
 
-from service.weibo_alert_state import AlertEvent, EventStatus
 from service.weibo_breaking_alerts import (
+    DomainEvent,
+    DomainEventStatus,
     TransitionAction,
     advance_event,
     assess,
@@ -27,7 +28,7 @@ def event(**overrides):
     values = {
         "event_key": "测试事件",
         "round_id": 1,
-        "status": EventStatus.OBSERVED,
+        "status": DomainEventStatus.OBSERVED,
         "first_seen_at": started,
         "last_seen_at": started,
         "last_rank": 10,
@@ -40,7 +41,7 @@ def event(**overrides):
         "completed_at": None,
     }
     values.update(overrides)
-    return AlertEvent(**values)
+    return DomainEvent(**values)
 
 
 def test_new_top_ten_item_with_breaking_tag_reaches_threshold():
@@ -96,11 +97,11 @@ def test_rank_jump_into_top_twenty_is_a_strong_breaking_signal():
     assert assessment.reasons == ["排名跃升", "Top 20"]
 
 
-def test_rank_jump_with_additional_recommendation_label_reaches_threshold():
+def test_rank_jump_with_new_and_recommendation_labels_uses_one_point_bucket():
     assessment = assess(previous=item(rank=35), current=item(rank=20, tags=["新", "荐"]))
 
-    assert assessment.score == 5
-    assert assessment.is_breaking is True
+    assert assessment.score == 4
+    assert assessment.is_breaking is False
     assert assessment.reasons == ["排名跃升", "Top 20", "推荐或新标签"]
 
 
@@ -163,9 +164,30 @@ def test_advance_event_completes_after_two_consecutive_rank_declines():
     assert second.rank_decline_streak == 2
 
 
+def test_absence_clears_rank_decline_streak_before_a_later_decline():
+    now = datetime(2026, 8, 31, tzinfo=timezone.utc)
+    absent = advance_event(
+        event(last_rank=11, rank_decline_streak=1), current=None, now=now
+    )
+    later_decline = advance_event(
+        event(
+            last_rank=11,
+            missing_streak=absent.missing_streak,
+            rank_decline_streak=absent.rank_decline_streak,
+        ),
+        current=item(rank=12),
+        now=now,
+    )
+
+    assert absent.action is TransitionAction.MARK_MISSING
+    assert absent.rank_decline_streak == 0
+    assert later_decline.action is TransitionAction.SEEN
+    assert later_decline.rank_decline_streak == 1
+
+
 def test_completed_event_restarts_only_after_twelve_hours_with_a_fresh_top_ten_item():
     finished = datetime(2026, 8, 31, tzinfo=timezone.utc)
-    completed = event(status=EventStatus.COMPLETED, completed_at=finished)
+    completed = event(status=DomainEventStatus.COMPLETED, completed_at=finished)
 
     too_soon = advance_event(
         completed, current=item(rank=1), now=finished + timedelta(hours=11)
@@ -174,9 +196,23 @@ def test_completed_event_restarts_only_after_twelve_hours_with_a_fresh_top_ten_i
         completed, current=item(rank=11), now=finished + timedelta(hours=12)
     )
     restarted = advance_event(
-        completed, current=item(rank=10), now=finished + timedelta(hours=12)
+        completed,
+        current=item(rank=10),
+        now=finished + timedelta(hours=12),
+        is_new_appearance=True,
     )
 
     assert too_soon.action is TransitionAction.IGNORE
     assert not_top_ten.action is TransitionAction.IGNORE
     assert restarted.action is TransitionAction.RESTART
+
+
+def test_completed_event_still_in_top_ten_does_not_restart_without_a_new_appearance():
+    finished = datetime(2026, 8, 31, tzinfo=timezone.utc)
+    completed = event(status=DomainEventStatus.COMPLETED, completed_at=finished)
+
+    transition = advance_event(
+        completed, current=item(rank=1), now=finished + timedelta(hours=12)
+    )
+
+    assert transition.action is TransitionAction.IGNORE

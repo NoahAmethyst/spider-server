@@ -6,9 +6,7 @@ import unicodedata
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from enum import Enum
-from typing import Any, Mapping, Sequence
-
-from service.weibo_alert_state import AlertEvent, EventStatus
+from typing import Any, Mapping, Protocol, Sequence
 
 
 BREAKING_TAGS = frozenset({"爆", "沸", "当前爆词"})
@@ -23,6 +21,42 @@ class Assessment:
     score: int
     is_breaking: bool
     reasons: list[str]
+
+
+class DomainEventStatus(str, Enum):
+    """The minimal event status vocabulary needed by the pure state machine."""
+
+    OBSERVED = "observed"
+    COMPLETED = "completed"
+
+
+@dataclass(frozen=True)
+class DomainEvent:
+    """A persistence-independent event snapshot for domain callers and tests."""
+
+    event_key: str
+    round_id: int
+    status: DomainEventStatus
+    first_seen_at: datetime
+    last_seen_at: datetime
+    last_rank: int
+    last_hot: int
+    last_tags: tuple[str, ...]
+    missing_streak: int
+    rank_decline_streak: int
+    notified_at: datetime | None
+    retry_count: int
+    completed_at: datetime | None
+
+
+class EventLike(Protocol):
+    """Structural contract accepted from a persistence adapter such as Task 3."""
+
+    status: object
+    completed_at: datetime | None
+    missing_streak: int
+    rank_decline_streak: int
+    last_rank: int
 
 
 class TransitionAction(str, Enum):
@@ -104,9 +138,8 @@ def assess(
         reasons.append("爆点标签")
         strong_signal = strong_signal or rank <= 20
 
-    promotion_count = len(PROMOTION_TAGS.intersection(tags))
-    if promotion_count:
-        score += promotion_count
+    if PROMOTION_TAGS.intersection(tags):
+        score += 1
         reasons.append("推荐或新标签")
 
     return Assessment(
@@ -139,9 +172,11 @@ def render_notification(
 
 
 def advance_event(
-    previous: AlertEvent | None,
+    previous: EventLike | None,
     current: Mapping[str, Any] | object | None,
     now: datetime,
+    *,
+    is_new_appearance: bool = False,
 ) -> EventTransition:
     """Recommend the next event transition; the caller persists the result.
 
@@ -152,11 +187,12 @@ def advance_event(
     if previous is None:
         return EventTransition(TransitionAction.SEEN, 0, 0)
 
-    if previous.status is EventStatus.COMPLETED:
+    if _is_completed(previous.status):
         if (
             current is not None
             and previous.completed_at is not None
             and now - previous.completed_at >= RESTART_COOLDOWN
+            and is_new_appearance
             and int(_field(current, "rank")) <= 10
         ):
             return EventTransition(TransitionAction.RESTART, 0, 0)
@@ -173,7 +209,7 @@ def advance_event(
             if missing_streak >= 2
             else TransitionAction.MARK_MISSING
         )
-        return EventTransition(action, missing_streak, previous.rank_decline_streak)
+        return EventTransition(action, missing_streak, 0)
 
     rank = int(_field(current, "rank"))
     rank_decline_streak = (
@@ -202,6 +238,11 @@ def _tags(item: Mapping[str, Any] | object) -> set[str]:
     if isinstance(raw_tags, str):
         return {raw_tags}
     return {str(tag) for tag in raw_tags}
+
+
+def _is_completed(status: object) -> bool:
+    """Accept this module's enum and a persistence layer's compatible enum."""
+    return getattr(status, "value", status) == DomainEventStatus.COMPLETED.value
 
 
 _MISSING = object()

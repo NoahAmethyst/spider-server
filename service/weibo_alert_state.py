@@ -167,9 +167,11 @@ class AlertStateStore:
         """Complete an event, creating a minimal completed record if necessary."""
         finished_at = self._as_utc(finished_at)
         with self._connection() as connection:
+            connection.execute("BEGIN IMMEDIATE")
             row = connection.execute(
                 "SELECT status FROM events WHERE event_key = ?", (event_key,)
             ).fetchone()
+            completed = row is None or EventStatus(row["status"]) is not EventStatus.COMPLETED
             if row is None:
                 timestamp = self._dump_time(finished_at)
                 connection.execute(
@@ -191,14 +193,15 @@ class AlertStateStore:
                         timestamp,
                     ),
                 )
-            elif EventStatus(row["status"]) is not EventStatus.COMPLETED:
+            elif completed:
                 connection.execute(
                     "UPDATE events SET status = ?, completed_at = ? WHERE event_key = ?",
                     (EventStatus.COMPLETED.value, self._dump_time(finished_at), event_key),
                 )
-            connection.execute(
-                "DELETE FROM daily_delivery_reservations WHERE event_key = ?", (event_key,)
-            )
+            if completed:
+                connection.execute(
+                    "DELETE FROM daily_delivery_reservations WHERE event_key = ?", (event_key,)
+                )
         event = self.load_event(event_key)
         assert event is not None
         return event
@@ -261,12 +264,13 @@ class AlertStateStore:
                 ).fetchone()
                 if reservation:
                     return True
-                reserved_count = connection.execute(
-                    "SELECT COUNT(*) AS count FROM daily_delivery_reservations WHERE day = ?",
-                    (day,),
-                ).fetchone()["count"]
-                if delivered_count + reserved_count >= DAILY_DELIVERY_LIMIT:
-                    return False
+            reserved_count = connection.execute(
+                "SELECT COUNT(*) AS count FROM daily_delivery_reservations WHERE day = ?",
+                (day,),
+            ).fetchone()["count"]
+            if delivered_count + reserved_count >= DAILY_DELIVERY_LIMIT:
+                return False
+            if event_key is not None:
                 connection.execute(
                     """
                     INSERT INTO daily_delivery_reservations (day, event_key)
@@ -275,8 +279,6 @@ class AlertStateStore:
                     (day, event_key),
                 )
                 return True
-            if delivered_count >= DAILY_DELIVERY_LIMIT:
-                return False
             if row is None:
                 connection.execute(
                     "INSERT INTO daily_delivery_budget (day, delivered_count) VALUES (?, ?)",
@@ -359,6 +361,7 @@ class AlertStateStore:
         release_reservation: bool = False,
     ) -> AlertEvent:
         with self._connection() as connection:
+            connection.execute("BEGIN IMMEDIATE")
             row = connection.execute(
                 "SELECT status FROM events WHERE event_key = ?", (event_key,)
             ).fetchone()

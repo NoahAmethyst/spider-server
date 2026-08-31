@@ -1,9 +1,11 @@
 from datetime import datetime, timedelta, timezone
 import sqlite3
+import threading
 from zoneinfo import ZoneInfo
 
 import pytest
 
+from service import weibo_alert_state
 from service.weibo_alert_state import AlertStateStore, EventStatus
 
 
@@ -264,3 +266,80 @@ def test_release_uses_the_original_shanghai_day_of_a_cross_midnight_reservation(
     with sqlite3.connect(path) as connection:
         assert connection.execute("SELECT COUNT(*) FROM daily_delivery_budget").fetchone() == (0,)
         assert connection.execute("SELECT COUNT(*) FROM daily_delivery_reservations").fetchone() == (0,)
+
+
+def test_immediate_budget_consumption_counts_pending_reservations(tmp_path):
+    store = AlertStateStore(tmp_path / "alerts.sqlite3")
+    now = datetime(2026, 8, 31, 9, tzinfo=timezone.utc)
+
+    assert store.reserve_daily_delivery(now, event_key="A") is True
+    for _ in range(4):
+        assert store.reserve_daily_delivery(now) is True
+    assert store.reserve_daily_delivery(now) is False
+    assert store.finalize_daily_delivery(now, "A") is True
+    assert store.reserve_daily_delivery(now) is False
+
+
+def test_complete_wins_against_a_concurrent_marker_after_it_reads_observed(
+    tmp_path, monkeypatch
+):
+    store = AlertStateStore(tmp_path / "alerts.sqlite3")
+    now = datetime(2026, 8, 31, 9, tzinfo=timezone.utc)
+    store.upsert_seen("事件", now, rank=1, hot=100, tags=[])
+    original_connect = weibo_alert_state.sqlite3.connect
+    marker_read = threading.Event()
+    allow_marker_update = threading.Event()
+    complete_updated = threading.Event()
+
+    class ConnectionProxy:
+        def __init__(self, connection):
+            object.__setattr__(self, "_connection", connection)
+
+        def __getattr__(self, name):
+            return getattr(self._connection, name)
+
+        def __setattr__(self, name, value):
+            setattr(self._connection, name, value)
+
+    class BlockingMarkerConnection(ConnectionProxy):
+        def execute(self, statement, parameters=()):
+            result = self._connection.execute(statement, parameters)
+            if "SELECT status FROM events" in statement:
+                marker_read.set()
+                assert allow_marker_update.wait(timeout=5)
+            return result
+
+    class ObservedCompleteConnection(ConnectionProxy):
+        def execute(self, statement, parameters=()):
+            result = self._connection.execute(statement, parameters)
+            if statement.startswith("UPDATE events SET status"):
+                complete_updated.set()
+            return result
+
+    def fake_connect(*args, **kwargs):
+        connection = original_connect(*args, **kwargs)
+        if threading.current_thread().name == "marker":
+            return BlockingMarkerConnection(connection)
+        if threading.current_thread().name == "completer":
+            return ObservedCompleteConnection(connection)
+        return connection
+
+    monkeypatch.setattr(weibo_alert_state.sqlite3, "connect", fake_connect)
+    marker = threading.Thread(
+        name="marker", target=lambda: store.mark_notified("事件", now)
+    )
+    completer = threading.Thread(
+        name="completer", target=lambda: store.complete("事件", now)
+    )
+    marker.start()
+    assert marker_read.wait(timeout=5)
+    completer.start()
+    complete_updated.wait(timeout=0.2)
+    allow_marker_update.set()
+    marker.join(timeout=5)
+    completer.join(timeout=5)
+
+    assert not marker.is_alive()
+    assert not completer.is_alive()
+    assert store.load_event("事件").status is EventStatus.COMPLETED
+    assert store.active_event_keys() == set()

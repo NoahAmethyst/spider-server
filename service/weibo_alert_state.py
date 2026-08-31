@@ -20,6 +20,9 @@ DELIVERY_TIME_ZONE = ZoneInfo("Asia/Shanghai")
 
 class EventStatus(str, Enum):
     OBSERVED = "observed"
+    # Notify is an irreversible remote side effect. A persisted dispatch marker
+    # prevents a process crash after the RPC from turning into a duplicate send.
+    DISPATCHING = "dispatching"
     NOTIFIED = "notified"
     COMPLETED = "completed"
     NO_SUBSCRIBERS = "no_subscribers"
@@ -183,7 +186,14 @@ class AlertStateStore:
             row = connection.execute(
                 "SELECT status FROM events WHERE event_key = ?", (event_key,)
             ).fetchone()
-            completed = row is None or EventStatus(row["status"]) is not EventStatus.COMPLETED
+            status = EventStatus(row["status"]) if row is not None else None
+            # A leftover dispatch marker means the remote outcome is unknown.
+            # Do not turn it into a completed/restartable event, because that
+            # could eventually resend a message QQ may already have accepted.
+            if status is EventStatus.DISPATCHING:
+                completed = False
+            else:
+                completed = row is None or status is not EventStatus.COMPLETED
             if row is None:
                 timestamp = self._dump_time(finished_at)
                 connection.execute(
@@ -227,6 +237,29 @@ class AlertStateStore:
             self._dump_time(notified_at),
         )
 
+    def mark_dispatching(self, event_key: str) -> AlertEvent:
+        """Durably fence a Notify attempt before issuing its irreversible RPC.
+
+        A process that dies after this transition cannot know whether QQ
+        accepted the message. Such a leftover ``DISPATCHING`` event is therefore
+        intentionally terminal for notification purposes.
+        """
+        with self._connection() as connection:
+            connection.execute("BEGIN IMMEDIATE")
+            row = connection.execute(
+                "SELECT status FROM events WHERE event_key = ?", (event_key,)
+            ).fetchone()
+            if row is None:
+                raise KeyError(f"unknown event: {event_key}")
+            if EventStatus(row["status"]) is EventStatus.OBSERVED:
+                connection.execute(
+                    "UPDATE events SET status = ? WHERE event_key = ?",
+                    (EventStatus.DISPATCHING.value, event_key),
+                )
+        event = self.load_event(event_key)
+        assert event is not None
+        return event
+
     def mark_no_subscribers(self, event_key: str) -> AlertEvent:
         return self._mark_and_load(
             event_key,
@@ -236,7 +269,17 @@ class AlertStateStore:
         )
 
     def mark_retry(self, event_key: str) -> AlertEvent:
-        return self._mark_and_load(event_key, "retry_count = retry_count + 1")
+        """Record one known failed RPC attempt and make it eligible for retry.
+
+        This is only called after an exception was observed by the client. If
+        the process dies before reaching this transition, ``DISPATCHING`` stays
+        durable and the monitor deliberately does not resend an unknown result.
+        """
+        return self._mark_and_load(
+            event_key,
+            "status = ?, retry_count = retry_count + 1",
+            EventStatus.OBSERVED.value,
+        )
 
     def mark_failed(self, event_key: str) -> AlertEvent:
         return self._mark_and_load(

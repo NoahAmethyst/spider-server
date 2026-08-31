@@ -1,5 +1,7 @@
 from datetime import datetime, timedelta, timezone
 
+import pytest
+
 from job.weibo_breaking_alerts import WeiboBreakingAlertMonitor
 from service.qqbot_notify import NotifyOutcome
 from service.weibo_alert_state import AlertEvent, AlertStateStore, EventStatus
@@ -196,3 +198,45 @@ def test_reloaded_snapshot_prevents_existing_item_from_being_treated_as_new(tmp_
     event = second._state_store.load_event("已在榜")
     assert isinstance(event, AlertEvent)
     assert event.status is EventStatus.OBSERVED
+
+
+def test_crash_after_qq_accepts_delivery_never_resends_after_restart(tmp_path, monkeypatch):
+    """A post-RPC crash is an unknown delivery result, so it is terminally deduped."""
+    path = tmp_path / "alerts.sqlite3"
+    first_notifier = FakeNotifier()
+    store = AlertStateStore(path)
+    first = WeiboBreakingAlertMonitor(
+        SnapshotFetcher([[item("基线", rank=30, tags=())], [item("爆点")]]),
+        store,
+        first_notifier,
+        FakeClock(),
+    )
+    first.run_once()
+
+    def crash_before_settlement(*args, **kwargs):
+        del args, kwargs
+        raise KeyboardInterrupt("simulated process crash after QQ accepted the message")
+
+    monkeypatch.setattr(store, "finalize_daily_delivery", crash_before_settlement)
+    with pytest.raises(KeyboardInterrupt, match="simulated process crash"):
+        first.run_once()
+
+    assert len(first_notifier.contents) == 1
+    # The pre-fix implementation leaves this as OBSERVED, allowing a duplicate.
+    assert store.load_event("爆点").status is EventStatus.DISPATCHING
+
+    restarted_notifier = FakeNotifier()
+    restarted = build_monitor(
+        tmp_path,
+        restarted_notifier,
+        [[], [], [item("爆点")]],
+        path=path,
+    )
+    restarted.run_once()
+    restarted.run_once()
+    restarted.run_once()
+
+    assert restarted_notifier.contents == []
+    event = restarted._state_store.load_event("爆点")
+    assert event.status is EventStatus.DISPATCHING
+    assert event.round_id == 1

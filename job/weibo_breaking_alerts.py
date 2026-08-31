@@ -61,6 +61,16 @@ class WeiboBreakingAlertMonitor:
         for event_key, current in current_snapshot.items():
             previous_snapshot_item = previous_snapshot.get(event_key)
             previous_event = self._state_store.load_event(event_key)
+            if previous_event is not None and previous_event.status is EventStatus.DISPATCHING:
+                # The process may have died after QQ accepted the RPC. Without
+                # an idempotency key in the protocol we must prefer suppressing
+                # an uncertain result to risking a duplicate user notification.
+                logger.warning(
+                    "Weibo breaking-alert dispatch outcome is unknown; suppressing resend "
+                    "for event=%s",
+                    event_key,
+                )
+                continue
             transition = advance_event(
                 previous_event,
                 current,
@@ -111,6 +121,12 @@ class WeiboBreakingAlertMonitor:
         previous_event = self._state_store.load_event(event_key)
         if previous_event is None:
             return
+        if previous_event.status is EventStatus.DISPATCHING:
+            logger.warning(
+                "Weibo breaking-alert dispatch outcome is unknown; retaining event=%s",
+                event_key,
+            )
+            return
         transition = advance_event(previous_event, None, now)
         if transition.action is TransitionAction.COMPLETE:
             self._state_store.complete(event_key, now)
@@ -133,8 +149,17 @@ class WeiboBreakingAlertMonitor:
         if not retrying and not assessment.is_breaking:
             return
 
+        logger.info(
+            "Weibo breaking-alert eligible event=%s score=%s reasons=%s retry=%s",
+            event.event_key,
+            assessment.score,
+            "+".join(assessment.reasons),
+            retrying,
+        )
+
         if not self._state_store.reserve_daily_delivery(now, event.event_key):
             self._state_store.mark_suppressed_by_budget(event.event_key)
+            logger.info("Weibo breaking-alert budget suppressed event=%s", event.event_key)
             return
 
         content = render_notification(
@@ -147,26 +172,44 @@ class WeiboBreakingAlertMonitor:
             tags=current.tags,
             reasons=assessment.reasons,
         )
+        dispatch = self._state_store.mark_dispatching(event.event_key)
+        if dispatch.status is not EventStatus.DISPATCHING:
+            logger.warning(
+                "Weibo breaking-alert dispatch state changed before Notify; suppressing event=%s",
+                event.event_key,
+            )
+            return
+        logger.info("Weibo breaking-alert Notify dispatch started event=%s", event.event_key)
         try:
             outcome = self._notifier.notify(content)
         except Exception:
             if retrying:
                 self._state_store.mark_failed(event.event_key)
-                logger.exception("Weibo breaking-alert Notify retry failed")
+                logger.exception("Weibo breaking-alert Notify retry failed event=%s", event.event_key)
             else:
                 self._state_store.mark_retry(event.event_key)
-                logger.exception("Weibo breaking-alert Notify failed; will retry once")
+                logger.exception(
+                    "Weibo breaking-alert Notify failed; will retry once event=%s",
+                    event.event_key,
+                )
             return
 
         if outcome is NotifyOutcome.NO_SUBSCRIBERS:
             self._state_store.mark_no_subscribers(event.event_key)
+            logger.info("Weibo breaking-alert has no subscribers event=%s", event.event_key)
             return
 
         if not self._state_store.finalize_daily_delivery(now, event.event_key):
             # Notify has already succeeded, so terminally deduplicate it rather
             # than risk a duplicate delivery if durable budget settlement fails.
-            logger.error("Weibo breaking-alert delivery reservation was missing")
+            logger.error(
+                "Weibo breaking-alert delivery settlement failed; retaining unknown "
+                "dispatch event=%s",
+                event.event_key,
+            )
+            return
         self._state_store.mark_notified(event.event_key, now)
+        logger.info("Weibo breaking-alert Notify delivered event=%s", event.event_key)
 
     @staticmethod
     def _snapshot_items(

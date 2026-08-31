@@ -108,6 +108,20 @@ def test_state_markers_update_one_existing_event(tmp_path):
     assert store.load_event("事件").status is EventStatus.FAILED
 
 
+def test_dispatching_fences_unknown_delivery_but_known_error_can_retry(tmp_path):
+    store = AlertStateStore(tmp_path / "alerts.sqlite3")
+    now = datetime(2026, 8, 31, 9, tzinfo=timezone.utc)
+    store.upsert_seen("事件", now, rank=1, hot=100, tags=[])
+    assert store.reserve_daily_delivery(now, event_key="事件") is True
+
+    assert store.mark_dispatching("事件").status is EventStatus.DISPATCHING
+    # A known client-side exception recovers the event for exactly one retry.
+    retry = store.mark_retry("事件")
+    assert retry.status is EventStatus.OBSERVED
+    assert retry.retry_count == 1
+    assert store.reserve_daily_delivery(now, event_key="事件") is True
+
+
 def test_seen_update_resets_missing_and_accepts_caller_rank_decline_streak(tmp_path):
     store = AlertStateStore(tmp_path / "alerts.sqlite3")
     first_seen = datetime(2026, 8, 31, 9, tzinfo=timezone.utc)

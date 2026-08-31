@@ -140,6 +140,29 @@ def test_notify_error_retries_exactly_once_then_becomes_terminal(tmp_path):
     assert event.retry_count == 1
 
 
+def test_pending_retry_runs_before_rank_decline_can_complete_event(tmp_path):
+    """A promised single retry must not be pre-empted by the completion rule."""
+    notifier = FakeNotifier([RuntimeError("first"), NotifyOutcome.DELIVERED])
+    monitor = build_monitor(
+        tmp_path,
+        notifier,
+        [
+            [item("爆点", rank=1, tags=())],
+            [item("爆点", rank=2, tags=("爆",))],
+            [item("爆点", rank=3, tags=("爆",))],
+        ],
+    )
+
+    monitor.run_once()  # baseline
+    monitor.run_once()  # first Notify fails and records the one permitted retry
+    monitor.run_once()  # second rank decline would otherwise complete the event
+
+    assert len(notifier.contents) == 2
+    event = monitor._state_store.load_event("爆点")
+    assert event.status is EventStatus.NOTIFIED
+    assert event.retry_count == 1
+
+
 def test_completed_event_only_restarts_after_quiet_new_top_ten_appearance(tmp_path):
     notifier = FakeNotifier()
     clock = FakeClock()

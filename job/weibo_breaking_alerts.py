@@ -85,6 +85,32 @@ class WeiboBreakingAlertMonitor:
                 now,
                 is_new_appearance=event_key not in previous_snapshot,
             )
+            # A known first Notify failure promises exactly one retry on the
+            # next *present* sample.  Persist the new observation, but let
+            # that retry happen before two worsening ranks can complete the
+            # event and discard its pending reservation.  Missing entries are
+            # still handled by ``_record_absence`` and never get forced sends.
+            pending_retry = (
+                previous_event is not None
+                and previous_event.status is EventStatus.OBSERVED
+                and previous_event.retry_count == 1
+            )
+            if pending_retry:
+                observed = self._state_store.upsert_seen(
+                    event_key,
+                    now,
+                    rank=current.rank,
+                    hot=current.hot,
+                    tags=current.tags,
+                    rank_decline_streak=transition.rank_decline_streak,
+                )
+                self._maybe_notify(
+                    observed,
+                    current,
+                    previous_snapshot_item=previous_snapshot_item,
+                    now=now,
+                )
+                continue
             if transition.action is TransitionAction.IGNORE:
                 continue
             if transition.action is TransitionAction.MARK_QUIET:

@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta, timezone
+import sqlite3
 from zoneinfo import ZoneInfo
 
 import pytest
@@ -224,3 +225,42 @@ def test_memory_database_path_is_rejected(tmp_path):
 
     with pytest.raises(ValueError, match="persistent file path"):
         AlertStateStore(":memory:")
+
+
+def test_finalize_uses_the_original_shanghai_day_of_a_cross_midnight_reservation(
+    tmp_path,
+):
+    path = tmp_path / "alerts.sqlite3"
+    store = AlertStateStore(path)
+    before_midnight = datetime(2026, 8, 31, 23, 59, tzinfo=ZoneInfo("Asia/Shanghai"))
+    after_midnight = before_midnight + timedelta(minutes=2)
+
+    assert store.reserve_daily_delivery(before_midnight, event_key="事件") is True
+    assert store.reserve_daily_delivery(after_midnight, event_key="事件") is True
+    with sqlite3.connect(path) as connection:
+        assert connection.execute(
+            "SELECT COUNT(*) FROM daily_delivery_reservations WHERE event_key = '事件'"
+        ).fetchone() == (1,)
+    assert store.finalize_daily_delivery(after_midnight, "事件") is True
+
+    with sqlite3.connect(path) as connection:
+        assert connection.execute(
+            "SELECT delivered_count FROM daily_delivery_budget WHERE day = '2026-08-31'"
+        ).fetchone() == (1,)
+        assert connection.execute("SELECT COUNT(*) FROM daily_delivery_reservations").fetchone() == (0,)
+
+
+def test_release_uses_the_original_shanghai_day_of_a_cross_midnight_reservation(
+    tmp_path,
+):
+    path = tmp_path / "alerts.sqlite3"
+    store = AlertStateStore(path)
+    before_midnight = datetime(2026, 8, 31, 23, 59, tzinfo=ZoneInfo("Asia/Shanghai"))
+    after_midnight = before_midnight + timedelta(minutes=2)
+
+    assert store.reserve_daily_delivery(before_midnight, event_key="事件") is True
+    assert store.release_daily_delivery(after_midnight, "事件") is True
+
+    with sqlite3.connect(path) as connection:
+        assert connection.execute("SELECT COUNT(*) FROM daily_delivery_budget").fetchone() == (0,)
+        assert connection.execute("SELECT COUNT(*) FROM daily_delivery_reservations").fetchone() == (0,)

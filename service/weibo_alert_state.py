@@ -255,9 +255,9 @@ class AlertStateStore:
                 reservation = connection.execute(
                     """
                     SELECT 1 FROM daily_delivery_reservations
-                    WHERE day = ? AND event_key = ?
+                    WHERE event_key = ?
                     """,
-                    (day, event_key),
+                    (event_key,),
                 ).fetchone()
                 if reservation:
                     return True
@@ -291,21 +291,22 @@ class AlertStateStore:
 
     def finalize_daily_delivery(self, now: datetime, event_key: str) -> bool:
         """Convert a pending reservation into a consumed delivery slot."""
-        day = self._delivery_day(now)
+        self._as_utc(now)
         with self._connection() as connection:
             connection.execute("BEGIN IMMEDIATE")
             reservation = connection.execute(
                 """
-                SELECT 1 FROM daily_delivery_reservations
-                WHERE day = ? AND event_key = ?
+                SELECT day FROM daily_delivery_reservations
+                WHERE event_key = ?
                 """,
-                (day, event_key),
+                (event_key,),
             ).fetchone()
             if reservation is None:
                 return False
+            day = reservation["day"]
             connection.execute(
-                "DELETE FROM daily_delivery_reservations WHERE day = ? AND event_key = ?",
-                (day, event_key),
+                "DELETE FROM daily_delivery_reservations WHERE event_key = ?",
+                (event_key,),
             )
             row = connection.execute(
                 "SELECT delivered_count FROM daily_delivery_budget WHERE day = ?", (day,)
@@ -324,11 +325,11 @@ class AlertStateStore:
 
     def release_daily_delivery(self, now: datetime, event_key: str) -> bool:
         """Release a pending reservation after a failed delivery."""
-        day = self._delivery_day(now)
+        self._as_utc(now)
         with self._connection() as connection:
             cursor = connection.execute(
-                "DELETE FROM daily_delivery_reservations WHERE day = ? AND event_key = ?",
-                (day, event_key),
+                "DELETE FROM daily_delivery_reservations WHERE event_key = ?",
+                (event_key,),
             )
         return cursor.rowcount == 1
 
@@ -401,10 +402,18 @@ class AlertStateStore:
                     delivered_count INTEGER NOT NULL
                 );
                 CREATE TABLE IF NOT EXISTS daily_delivery_reservations (
-                    day TEXT NOT NULL,
-                    event_key TEXT NOT NULL,
-                    PRIMARY KEY (day, event_key)
+                    event_key TEXT PRIMARY KEY,
+                    day TEXT NOT NULL
                 );
+                DELETE FROM daily_delivery_reservations
+                WHERE rowid NOT IN (
+                    SELECT MIN(rowid)
+                    FROM daily_delivery_reservations
+                    GROUP BY event_key
+                );
+                CREATE UNIQUE INDEX IF NOT EXISTS
+                daily_delivery_reservations_event_key_unique
+                ON daily_delivery_reservations (event_key);
                 """
             )
 

@@ -6,7 +6,7 @@ from zoneinfo import ZoneInfo
 import pytest
 
 from service import weibo_alert_state
-from service.weibo_alert_state import AlertStateStore, EventStatus
+from service.weibo_alert_state import AlertStateStore, EventStatus, WeiboSnapshotItem
 
 
 def test_budget_allows_only_five_delivered_events(tmp_path):
@@ -41,6 +41,30 @@ def test_new_store_reads_events_persisted_at_the_same_path(tmp_path):
     assert event.last_hot == 123
     assert event.last_tags == ("爆", "新")
     assert event.last_seen_at == seen_at
+
+
+def test_latest_complete_snapshot_persists_across_store_reloads(tmp_path):
+    path = tmp_path / "alerts.sqlite3"
+    store = AlertStateStore(path)
+
+    assert store.load_latest_snapshot() is None
+    store.replace_latest_snapshot(
+        [
+            WeiboSnapshotItem(
+                event_key="事件",
+                title="事件",
+                url="https://weibo.com/x",
+                rank=1,
+                hot=123,
+                tags=("爆", "新"),
+            )
+        ]
+    )
+
+    snapshot = AlertStateStore(path).load_latest_snapshot()
+    assert snapshot is not None
+    assert snapshot["事件"].rank == 1
+    assert snapshot["事件"].tags == ("爆", "新")
 
 
 def test_no_subscribers_does_not_consume_daily_budget(tmp_path):

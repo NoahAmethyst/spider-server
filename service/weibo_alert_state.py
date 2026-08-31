@@ -44,6 +44,18 @@ class AlertEvent:
     completed_at: datetime | None
 
 
+@dataclass(frozen=True)
+class WeiboSnapshotItem:
+    """One item from the most recently completed full Weibo rank snapshot."""
+
+    event_key: str
+    title: str
+    url: str
+    rank: int
+    hot: int
+    tags: tuple[str, ...]
+
+
 class AlertStateStore:
     """SQLite-backed event state and global daily delivery budget."""
 
@@ -353,6 +365,61 @@ class AlertStateStore:
             ).fetchall()
         return {row["event_key"] for row in rows}
 
+    def load_latest_snapshot(self) -> dict[str, WeiboSnapshotItem] | None:
+        """Return the last complete rank snapshot, or ``None`` before a baseline.
+
+        Keeping a separate marker table makes an empty completed snapshot distinct
+        from a database that has never been baselined.
+        """
+        with self._connection() as connection:
+            baseline = connection.execute(
+                "SELECT 1 FROM latest_weibo_snapshot_state WHERE id = 1"
+            ).fetchone()
+            if baseline is None:
+                return None
+            rows = connection.execute(
+                "SELECT * FROM latest_weibo_snapshot"
+            ).fetchall()
+        return {
+            row["event_key"]: WeiboSnapshotItem(
+                event_key=row["event_key"],
+                title=row["title"],
+                url=row["url"],
+                rank=row["rank"],
+                hot=row["hot"],
+                tags=tuple(json.loads(row["tags_json"])),
+            )
+            for row in rows
+        }
+
+    def replace_latest_snapshot(self, items: Iterable[WeiboSnapshotItem]) -> None:
+        """Atomically replace the persisted previous-complete-snapshot boundary."""
+        materialized = tuple(items)
+        with self._connection() as connection:
+            connection.execute("BEGIN IMMEDIATE")
+            connection.execute("DELETE FROM latest_weibo_snapshot")
+            connection.executemany(
+                """
+                INSERT INTO latest_weibo_snapshot (
+                    event_key, title, url, rank, hot, tags_json
+                ) VALUES (?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    (
+                        item.event_key,
+                        item.title,
+                        item.url,
+                        item.rank,
+                        item.hot,
+                        json.dumps(list(item.tags), ensure_ascii=False),
+                    )
+                    for item in materialized
+                ),
+            )
+            connection.execute(
+                "INSERT OR REPLACE INTO latest_weibo_snapshot_state (id) VALUES (1)"
+            )
+
     def _mark_and_load(
         self,
         event_key: str,
@@ -407,6 +474,17 @@ class AlertStateStore:
                 CREATE TABLE IF NOT EXISTS daily_delivery_reservations (
                     event_key TEXT PRIMARY KEY,
                     day TEXT NOT NULL
+                );
+                CREATE TABLE IF NOT EXISTS latest_weibo_snapshot (
+                    event_key TEXT PRIMARY KEY,
+                    title TEXT NOT NULL,
+                    url TEXT NOT NULL,
+                    rank INTEGER NOT NULL,
+                    hot INTEGER NOT NULL,
+                    tags_json TEXT NOT NULL
+                );
+                CREATE TABLE IF NOT EXISTS latest_weibo_snapshot_state (
+                    id INTEGER PRIMARY KEY CHECK (id = 1)
                 );
                 DELETE FROM daily_delivery_reservations
                 WHERE rowid NOT IN (

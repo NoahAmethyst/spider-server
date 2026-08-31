@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta, timezone
+from zoneinfo import ZoneInfo
 
 import pytest
 
@@ -119,3 +120,107 @@ def test_restart_creates_next_round_only_after_completed_cooldown(tmp_path):
     assert event.round_id == 2
     assert event.status is EventStatus.OBSERVED
     assert event.completed_at is None
+
+
+def test_reservation_release_frees_a_daily_delivery_slot(tmp_path):
+    store = AlertStateStore(tmp_path / "alerts.sqlite3")
+    now = datetime(2026, 8, 31, 9, tzinfo=timezone.utc)
+
+    for index in range(5):
+        assert store.reserve_daily_delivery(now, event_key=f"事件{index}")
+    assert store.reserve_daily_delivery(now, event_key="第六个") is False
+
+    assert store.release_daily_delivery(now, "事件0") is True
+    assert store.reserve_daily_delivery(now, event_key="第六个") is True
+
+
+def test_finalized_reservation_keeps_its_daily_delivery_slot(tmp_path):
+    store = AlertStateStore(tmp_path / "alerts.sqlite3")
+    now = datetime(2026, 8, 31, 9, tzinfo=timezone.utc)
+
+    assert store.reserve_daily_delivery(now, event_key="已发送") is True
+    assert store.finalize_daily_delivery(now, "已发送") is True
+    for index in range(4):
+        assert store.reserve_daily_delivery(now, event_key=f"事件{index}")
+    assert store.reserve_daily_delivery(now, event_key="第六个") is False
+    assert store.release_daily_delivery(now, "已发送") is False
+    assert store.reserve_daily_delivery(now, event_key="第六个") is False
+
+
+@pytest.mark.parametrize("outcome", ["no_subscribers", "failed"])
+def test_terminal_non_delivery_releases_reservation_for_sixth_candidate(tmp_path, outcome):
+    store = AlertStateStore(tmp_path / "alerts.sqlite3")
+    now = datetime(2026, 8, 31, 9, tzinfo=timezone.utc)
+    for index in range(5):
+        key = f"事件{index}"
+        store.upsert_seen(key, now, rank=1, hot=100, tags=[])
+        assert store.reserve_daily_delivery(now, event_key=key)
+
+    if outcome == "no_subscribers":
+        store.mark_no_subscribers("事件0")
+    else:
+        store.mark_failed("事件0")
+
+    assert store.reserve_daily_delivery(now, event_key="第六个") is True
+
+
+def test_completed_event_ignores_all_state_markers(tmp_path):
+    store = AlertStateStore(tmp_path / "alerts.sqlite3")
+    finished = datetime(2026, 8, 31, 9, tzinfo=timezone.utc)
+    store.complete("事件", finished)
+
+    for marker in (
+        lambda: store.mark_notified("事件", finished),
+        lambda: store.mark_no_subscribers("事件"),
+        lambda: store.mark_retry("事件"),
+        lambda: store.mark_failed("事件"),
+        lambda: store.mark_suppressed_by_budget("事件"),
+    ):
+        assert marker().status is EventStatus.COMPLETED
+        assert store.active_event_keys() == set()
+
+
+def test_daily_budget_uses_asia_shanghai_calendar_day(tmp_path):
+    store = AlertStateStore(tmp_path / "alerts.sqlite3")
+    before_midnight = datetime(2026, 8, 31, 15, 59, tzinfo=timezone.utc)
+    after_midnight = datetime(2026, 8, 31, 16, 0, tzinfo=timezone.utc)
+
+    assert before_midnight.astimezone(ZoneInfo("Asia/Shanghai")).date().isoformat() == "2026-08-31"
+    assert after_midnight.astimezone(ZoneInfo("Asia/Shanghai")).date().isoformat() == "2026-09-01"
+    for index in range(5):
+        assert store.reserve_daily_delivery(before_midnight, event_key=f"前{index}")
+    assert store.reserve_daily_delivery(after_midnight, event_key="次日") is True
+
+
+def test_persisted_timestamps_are_normalized_to_utc(tmp_path):
+    store = AlertStateStore(tmp_path / "alerts.sqlite3")
+    shanghai_time = datetime(2026, 8, 31, 9, tzinfo=ZoneInfo("Asia/Shanghai"))
+
+    event = store.upsert_seen("事件", shanghai_time, rank=1, hot=100, tags=[])
+
+    assert event.first_seen_at == datetime(2026, 8, 31, 1, tzinfo=timezone.utc)
+    assert event.first_seen_at.tzinfo is timezone.utc
+    reloaded = AlertStateStore(tmp_path / "alerts.sqlite3").load_event("事件")
+    assert reloaded.last_seen_at == datetime(2026, 8, 31, 1, tzinfo=timezone.utc)
+    assert reloaded.last_seen_at.tzinfo is timezone.utc
+
+
+def test_public_time_inputs_require_timezone_aware_datetimes(tmp_path):
+    store = AlertStateStore(tmp_path / "alerts.sqlite3")
+    naive = datetime(2026, 8, 31, 9)
+
+    with pytest.raises(ValueError, match="timezone-aware"):
+        store.upsert_seen("事件", naive, rank=1, hot=100, tags=[])
+    with pytest.raises(ValueError, match="timezone-aware"):
+        store.complete("事件", naive)
+    with pytest.raises(ValueError, match="timezone-aware"):
+        store.reserve_daily_delivery(naive)
+    with pytest.raises(ValueError, match="timezone-aware"):
+        store.can_restart("事件", naive)
+
+
+def test_memory_database_path_is_rejected(tmp_path):
+    del tmp_path
+
+    with pytest.raises(ValueError, match="persistent file path"):
+        AlertStateStore(":memory:")

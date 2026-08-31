@@ -6,14 +6,16 @@ import json
 import sqlite3
 from contextlib import contextmanager
 from dataclasses import dataclass
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from enum import Enum
 from pathlib import Path
 from typing import Iterable, Iterator
+from zoneinfo import ZoneInfo
 
 
 DAILY_DELIVERY_LIMIT = 5
 RESTART_COOLDOWN = timedelta(hours=12)
+DELIVERY_TIME_ZONE = ZoneInfo("Asia/Shanghai")
 
 
 class EventStatus(str, Enum):
@@ -47,8 +49,9 @@ class AlertStateStore:
 
     def __init__(self, path: str | Path):
         self._path = str(path)
-        if self._path != ":memory:":
-            Path(self._path).parent.mkdir(parents=True, exist_ok=True)
+        if self._path == ":memory:":
+            raise ValueError("AlertStateStore requires a persistent file path")
+        Path(self._path).parent.mkdir(parents=True, exist_ok=True)
         self._initialize()
 
     def load_event(self, event_key: str) -> AlertEvent | None:
@@ -74,6 +77,7 @@ class AlertStateStore:
         ``restart`` is intentionally explicit: callers must first use
         :meth:`can_restart` before beginning a new round of a completed event.
         """
+        seen_at = self._as_utc(seen_at)
         tags_json = json.dumps(list(tags), ensure_ascii=False)
         with self._connection() as connection:
             row = connection.execute(
@@ -102,9 +106,9 @@ class AlertStateStore:
                         0,
                     ),
                 )
-            elif restart:
-                if EventStatus(row["status"]) is not EventStatus.COMPLETED:
-                    raise ValueError("only completed events can start a new round")
+            elif EventStatus(row["status"]) is EventStatus.COMPLETED:
+                if not restart:
+                    return self._event_from_row(row)
                 completed_at = self._load_time(row["completed_at"])
                 if completed_at is None or seen_at - completed_at < RESTART_COOLDOWN:
                     raise ValueError("completed events require a 12-hour cooldown")
@@ -129,6 +133,8 @@ class AlertStateStore:
                         event_key,
                     ),
                 )
+            elif restart:
+                raise ValueError("only completed events can start a new round")
             else:
                 connection.execute(
                     """
@@ -159,9 +165,10 @@ class AlertStateStore:
 
     def complete(self, event_key: str, finished_at: datetime) -> AlertEvent:
         """Complete an event, creating a minimal completed record if necessary."""
+        finished_at = self._as_utc(finished_at)
         with self._connection() as connection:
             row = connection.execute(
-                "SELECT event_key FROM events WHERE event_key = ?", (event_key,)
+                "SELECT status FROM events WHERE event_key = ?", (event_key,)
             ).fetchone()
             if row is None:
                 timestamp = self._dump_time(finished_at)
@@ -184,16 +191,20 @@ class AlertStateStore:
                         timestamp,
                     ),
                 )
-            else:
+            elif EventStatus(row["status"]) is not EventStatus.COMPLETED:
                 connection.execute(
                     "UPDATE events SET status = ?, completed_at = ? WHERE event_key = ?",
                     (EventStatus.COMPLETED.value, self._dump_time(finished_at), event_key),
                 )
+            connection.execute(
+                "DELETE FROM daily_delivery_reservations WHERE event_key = ?", (event_key,)
+            )
         event = self.load_event(event_key)
         assert event is not None
         return event
 
     def mark_notified(self, event_key: str, notified_at: datetime) -> AlertEvent:
+        notified_at = self._as_utc(notified_at)
         return self._mark_and_load(
             event_key,
             "status = ?, notified_at = ?",
@@ -203,31 +214,68 @@ class AlertStateStore:
 
     def mark_no_subscribers(self, event_key: str) -> AlertEvent:
         return self._mark_and_load(
-            event_key, "status = ?", EventStatus.NO_SUBSCRIBERS.value
+            event_key,
+            "status = ?",
+            EventStatus.NO_SUBSCRIBERS.value,
+            release_reservation=True,
         )
 
     def mark_retry(self, event_key: str) -> AlertEvent:
         return self._mark_and_load(event_key, "retry_count = retry_count + 1")
 
     def mark_failed(self, event_key: str) -> AlertEvent:
-        return self._mark_and_load(event_key, "status = ?", EventStatus.FAILED.value)
+        return self._mark_and_load(
+            event_key,
+            "status = ?",
+            EventStatus.FAILED.value,
+            release_reservation=True,
+        )
 
     def mark_suppressed_by_budget(self, event_key: str) -> AlertEvent:
         return self._mark_and_load(
             event_key, "status = ?", EventStatus.SUPPRESSED_BY_BUDGET.value
         )
 
-    def reserve_daily_delivery(self, now: datetime) -> bool:
-        """Reserve one of the five delivery slots for ``now``'s local day."""
-        day = now.date().isoformat()
+    def reserve_daily_delivery(self, now: datetime, event_key: str | None = None) -> bool:
+        """Reserve a Shanghai-calendar-day delivery slot.
+
+        With ``event_key`` this creates a pending reservation. Call
+        :meth:`finalize_daily_delivery` after Notify succeeds, or release it
+        after a terminal non-delivery outcome. Omitting ``event_key`` preserves
+        the old immediate-consumption behavior.
+        """
+        day = self._delivery_day(now)
         with self._connection() as connection:
             connection.execute("BEGIN IMMEDIATE")
             row = connection.execute(
                 "SELECT delivered_count FROM daily_delivery_budget WHERE day = ?", (day,)
             ).fetchone()
             delivered_count = row["delivered_count"] if row else 0
+            if event_key is not None:
+                reservation = connection.execute(
+                    """
+                    SELECT 1 FROM daily_delivery_reservations
+                    WHERE day = ? AND event_key = ?
+                    """,
+                    (day, event_key),
+                ).fetchone()
+                if reservation:
+                    return True
+                reserved_count = connection.execute(
+                    "SELECT COUNT(*) AS count FROM daily_delivery_reservations WHERE day = ?",
+                    (day,),
+                ).fetchone()["count"]
+                if delivered_count + reserved_count >= DAILY_DELIVERY_LIMIT:
+                    return False
+                connection.execute(
+                    """
+                    INSERT INTO daily_delivery_reservations (day, event_key)
+                    VALUES (?, ?)
+                    """,
+                    (day, event_key),
+                )
+                return True
             if delivered_count >= DAILY_DELIVERY_LIMIT:
-                connection.commit()
                 return False
             if row is None:
                 connection.execute(
@@ -239,10 +287,53 @@ class AlertStateStore:
                     "UPDATE daily_delivery_budget SET delivered_count = ? WHERE day = ?",
                     (delivered_count + 1, day),
                 )
-            connection.commit()
             return True
 
+    def finalize_daily_delivery(self, now: datetime, event_key: str) -> bool:
+        """Convert a pending reservation into a consumed delivery slot."""
+        day = self._delivery_day(now)
+        with self._connection() as connection:
+            connection.execute("BEGIN IMMEDIATE")
+            reservation = connection.execute(
+                """
+                SELECT 1 FROM daily_delivery_reservations
+                WHERE day = ? AND event_key = ?
+                """,
+                (day, event_key),
+            ).fetchone()
+            if reservation is None:
+                return False
+            connection.execute(
+                "DELETE FROM daily_delivery_reservations WHERE day = ? AND event_key = ?",
+                (day, event_key),
+            )
+            row = connection.execute(
+                "SELECT delivered_count FROM daily_delivery_budget WHERE day = ?", (day,)
+            ).fetchone()
+            if row is None:
+                connection.execute(
+                    "INSERT INTO daily_delivery_budget (day, delivered_count) VALUES (?, ?)",
+                    (day, 1),
+                )
+            else:
+                connection.execute(
+                    "UPDATE daily_delivery_budget SET delivered_count = ? WHERE day = ?",
+                    (row["delivered_count"] + 1, day),
+                )
+            return True
+
+    def release_daily_delivery(self, now: datetime, event_key: str) -> bool:
+        """Release a pending reservation after a failed delivery."""
+        day = self._delivery_day(now)
+        with self._connection() as connection:
+            cursor = connection.execute(
+                "DELETE FROM daily_delivery_reservations WHERE day = ? AND event_key = ?",
+                (day, event_key),
+            )
+        return cursor.rowcount == 1
+
     def can_restart(self, event_key: str, at: datetime) -> bool:
+        at = self._as_utc(at)
         event = self.load_event(event_key)
         return bool(
             event
@@ -259,13 +350,29 @@ class AlertStateStore:
             ).fetchall()
         return {row["event_key"] for row in rows}
 
-    def _mark_and_load(self, event_key: str, assignment: str, *values: object) -> AlertEvent:
+    def _mark_and_load(
+        self,
+        event_key: str,
+        assignment: str,
+        *values: object,
+        release_reservation: bool = False,
+    ) -> AlertEvent:
         with self._connection() as connection:
-            cursor = connection.execute(
-                f"UPDATE events SET {assignment} WHERE event_key = ?", (*values, event_key)
-            )
-            if cursor.rowcount != 1:
+            row = connection.execute(
+                "SELECT status FROM events WHERE event_key = ?", (event_key,)
+            ).fetchone()
+            if row is None:
                 raise KeyError(f"unknown event: {event_key}")
+            if EventStatus(row["status"]) is not EventStatus.COMPLETED:
+                connection.execute(
+                    f"UPDATE events SET {assignment} WHERE event_key = ?",
+                    (*values, event_key),
+                )
+                if release_reservation:
+                    connection.execute(
+                        "DELETE FROM daily_delivery_reservations WHERE event_key = ?",
+                        (event_key,),
+                    )
         event = self.load_event(event_key)
         assert event is not None
         return event
@@ -293,6 +400,11 @@ class AlertStateStore:
                     day TEXT PRIMARY KEY,
                     delivered_count INTEGER NOT NULL
                 );
+                CREATE TABLE IF NOT EXISTS daily_delivery_reservations (
+                    day TEXT NOT NULL,
+                    event_key TEXT NOT NULL,
+                    PRIMARY KEY (day, event_key)
+                );
                 """
             )
 
@@ -311,11 +423,21 @@ class AlertStateStore:
 
     @staticmethod
     def _dump_time(value: datetime) -> str:
-        return value.isoformat()
+        return AlertStateStore._as_utc(value).isoformat()
 
     @staticmethod
     def _load_time(value: str | None) -> datetime | None:
-        return datetime.fromisoformat(value) if value is not None else None
+        return AlertStateStore._as_utc(datetime.fromisoformat(value)) if value else None
+
+    @staticmethod
+    def _as_utc(value: datetime) -> datetime:
+        if value.tzinfo is None or value.utcoffset() is None:
+            raise ValueError("datetime inputs must be timezone-aware")
+        return value.astimezone(timezone.utc)
+
+    @classmethod
+    def _delivery_day(cls, value: datetime) -> str:
+        return cls._as_utc(value).astimezone(DELIVERY_TIME_ZONE).date().isoformat()
 
     @classmethod
     def _event_from_row(cls, row: sqlite3.Row) -> AlertEvent:

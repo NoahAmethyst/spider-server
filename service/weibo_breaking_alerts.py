@@ -47,6 +47,7 @@ class DomainEvent:
     notified_at: datetime | None
     retry_count: int
     completed_at: datetime | None
+    quiet_since_at: datetime | None
 
 
 class EventLike(Protocol):
@@ -54,6 +55,7 @@ class EventLike(Protocol):
 
     status: object
     completed_at: datetime | None
+    quiet_since_at: datetime | None
     missing_streak: int
     rank_decline_streak: int
     last_rank: int
@@ -66,6 +68,7 @@ class TransitionAction(str, Enum):
     MARK_MISSING = "mark_missing"
     COMPLETE = "complete"
     RESTART = "restart"
+    MARK_QUIET = "mark_quiet"
     IGNORE = "ignore"
 
 
@@ -76,6 +79,7 @@ class EventTransition:
     action: TransitionAction
     missing_streak: int
     rank_decline_streak: int
+    quiet_since_at: datetime | None = None
 
 
 def normalize_title(title: str) -> str:
@@ -182,16 +186,27 @@ def advance_event(
 
     Two absent snapshots or two consecutive numerically worse ranks complete an
     active event. A completed event may only restart after its 12-hour quiet
-    period and a newly observed Top-10 item.
+    period measured from its first actual absence, and a newly observed Top-10
+    item.
     """
     if previous is None:
         return EventTransition(TransitionAction.SEEN, 0, 0)
 
     if _is_completed(previous.status):
+        if current is None:
+            quiet_since_at = previous.quiet_since_at or now
+            return EventTransition(
+                TransitionAction.MARK_QUIET
+                if previous.quiet_since_at is None
+                else TransitionAction.IGNORE,
+                previous.missing_streak,
+                previous.rank_decline_streak,
+                quiet_since_at,
+            )
         if (
             current is not None
-            and previous.completed_at is not None
-            and now - previous.completed_at >= RESTART_COOLDOWN
+            and previous.quiet_since_at is not None
+            and now - previous.quiet_since_at >= RESTART_COOLDOWN
             and is_new_appearance
             and int(_field(current, "rank")) <= 10
         ):
@@ -200,6 +215,7 @@ def advance_event(
             TransitionAction.IGNORE,
             previous.missing_streak,
             previous.rank_decline_streak,
+            previous.quiet_since_at,
         )
 
     if current is None:
@@ -209,7 +225,7 @@ def advance_event(
             if missing_streak >= 2
             else TransitionAction.MARK_MISSING
         )
-        return EventTransition(action, missing_streak, 0)
+        return EventTransition(action, missing_streak, 0, previous.quiet_since_at or now)
 
     rank = int(_field(current, "rank"))
     rank_decline_streak = (

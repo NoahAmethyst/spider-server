@@ -39,6 +39,7 @@ class WeiboBreakingAlertMonitor:
         self._state_store = state_store
         self._notifier = notifier
         self._clock = clock
+        self._first_run = True
 
     def run_once(self) -> None:
         """Fetch one complete snapshot and process its state transitions.
@@ -51,11 +52,18 @@ class WeiboBreakingAlertMonitor:
         current_snapshot = self._snapshot_items(self._fetch_hot_list())
         previous_snapshot = self._state_store.load_latest_snapshot()
 
-        if previous_snapshot is None:
+        if self._first_run or previous_snapshot is None:
             self._write_baseline(current_snapshot.values(), now)
+            self._first_run = False
             return
 
-        for event_key in self._state_store.active_event_keys() - current_snapshot.keys():
+        # Completed events still need their *first* later absence persisted as
+        # ``quiet_since_at``.  The preceding complete snapshot identifies that
+        # boundary even though completed events are not otherwise active.
+        absent_keys = (
+            self._state_store.active_event_keys() | previous_snapshot.keys()
+        ) - current_snapshot.keys()
+        for event_key in absent_keys:
             self._record_absence(event_key, now)
 
         for event_key, current in current_snapshot.items():
@@ -78,6 +86,9 @@ class WeiboBreakingAlertMonitor:
                 is_new_appearance=event_key not in previous_snapshot,
             )
             if transition.action is TransitionAction.IGNORE:
+                continue
+            if transition.action is TransitionAction.MARK_QUIET:
+                self._state_store.mark_quiet_since(event_key, now)
                 continue
             if transition.action is TransitionAction.COMPLETE:
                 self._state_store.complete(event_key, now)
@@ -102,6 +113,7 @@ class WeiboBreakingAlertMonitor:
 
         # Persist even when a notifier error was classified for a later retry.
         self._state_store.replace_latest_snapshot(current_snapshot.values())
+        self._first_run = False
 
     def _write_baseline(
         self, current_items: Iterable[WeiboSnapshotItem], now: datetime
@@ -131,7 +143,9 @@ class WeiboBreakingAlertMonitor:
         if transition.action is TransitionAction.COMPLETE:
             self._state_store.complete(event_key, now)
         elif transition.action is TransitionAction.MARK_MISSING:
-            self._state_store.mark_missing(event_key)
+            self._state_store.mark_missing(event_key, now)
+        elif transition.action is TransitionAction.MARK_QUIET:
+            self._state_store.mark_quiet_since(event_key, now)
 
     def _maybe_notify(
         self,
@@ -172,12 +186,8 @@ class WeiboBreakingAlertMonitor:
             tags=current.tags,
             reasons=assessment.reasons,
         )
-        dispatch = self._state_store.mark_dispatching(event.event_key)
-        if dispatch.status is not EventStatus.DISPATCHING:
-            logger.warning(
-                "Weibo breaking-alert dispatch state changed before Notify; suppressing event=%s",
-                event.event_key,
-            )
+        if not self._state_store.claim_dispatch(event.event_key):
+            logger.info("Weibo breaking-alert dispatch already claimed event=%s", event.event_key)
             return
         logger.info("Weibo breaking-alert Notify dispatch started event=%s", event.event_key)
         try:

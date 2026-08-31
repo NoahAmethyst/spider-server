@@ -39,6 +39,7 @@ def event(**overrides):
         "notified_at": None,
         "retry_count": 0,
         "completed_at": None,
+        "quiet_since_at": None,
     }
     values.update(overrides)
     return DomainEvent(**values)
@@ -185,20 +186,25 @@ def test_absence_clears_rank_decline_streak_before_a_later_decline():
     assert later_decline.rank_decline_streak == 1
 
 
-def test_completed_event_restarts_only_after_twelve_hours_with_a_fresh_top_ten_item():
+def test_completed_event_restarts_only_after_twelve_hours_of_real_quiet_with_a_fresh_top_ten_item():
     finished = datetime(2026, 8, 31, tzinfo=timezone.utc)
-    completed = event(status=DomainEventStatus.COMPLETED, completed_at=finished)
+    quiet_since = finished + timedelta(minutes=30)
+    completed = event(
+        status=DomainEventStatus.COMPLETED,
+        completed_at=finished,
+        quiet_since_at=quiet_since,
+    )
 
     too_soon = advance_event(
-        completed, current=item(rank=1), now=finished + timedelta(hours=11)
+        completed, current=item(rank=1), now=quiet_since + timedelta(hours=11)
     )
     not_top_ten = advance_event(
-        completed, current=item(rank=11), now=finished + timedelta(hours=12)
+        completed, current=item(rank=11), now=quiet_since + timedelta(hours=12)
     )
     restarted = advance_event(
         completed,
         current=item(rank=10),
-        now=finished + timedelta(hours=12),
+        now=quiet_since + timedelta(hours=12),
         is_new_appearance=True,
     )
 
@@ -209,10 +215,47 @@ def test_completed_event_restarts_only_after_twelve_hours_with_a_fresh_top_ten_i
 
 def test_completed_event_still_in_top_ten_does_not_restart_without_a_new_appearance():
     finished = datetime(2026, 8, 31, tzinfo=timezone.utc)
-    completed = event(status=DomainEventStatus.COMPLETED, completed_at=finished)
+    completed = event(
+        status=DomainEventStatus.COMPLETED,
+        completed_at=finished,
+        quiet_since_at=finished,
+    )
 
     transition = advance_event(
         completed, current=item(rank=1), now=finished + timedelta(hours=12)
     )
 
     assert transition.action is TransitionAction.IGNORE
+
+
+def test_completed_rank_decline_event_waits_twelve_hours_from_first_absence():
+    finished = datetime(2026, 8, 31, tzinfo=timezone.utc)
+    completed = event(status=DomainEventStatus.COMPLETED, completed_at=finished)
+    first_absence = finished + timedelta(minutes=30)
+
+    absent = advance_event(completed, current=None, now=first_absence)
+    assert absent.quiet_since_at == first_absence
+
+    too_soon = advance_event(
+        event(
+            status=DomainEventStatus.COMPLETED,
+            completed_at=finished,
+            quiet_since_at=first_absence,
+        ),
+        current=item(rank=1),
+        now=finished + timedelta(hours=12),
+        is_new_appearance=True,
+    )
+    restarted = advance_event(
+        event(
+            status=DomainEventStatus.COMPLETED,
+            completed_at=finished,
+            quiet_since_at=first_absence,
+        ),
+        current=item(rank=1),
+        now=first_absence + timedelta(hours=12),
+        is_new_appearance=True,
+    )
+
+    assert too_soon.action is TransitionAction.IGNORE
+    assert restarted.action is TransitionAction.RESTART

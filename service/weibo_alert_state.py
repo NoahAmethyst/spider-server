@@ -45,6 +45,7 @@ class AlertEvent:
     notified_at: datetime | None
     retry_count: int
     completed_at: datetime | None
+    quiet_since_at: datetime | None
 
 
 @dataclass(frozen=True)
@@ -124,8 +125,8 @@ class AlertStateStore:
             elif EventStatus(row["status"]) is EventStatus.COMPLETED:
                 if not restart:
                     return self._event_from_row(row)
-                completed_at = self._load_time(row["completed_at"])
-                if completed_at is None or seen_at - completed_at < RESTART_COOLDOWN:
+                quiet_since_at = self._load_time(row["quiet_since_at"])
+                if quiet_since_at is None or seen_at - quiet_since_at < RESTART_COOLDOWN:
                     raise ValueError("completed events require a 12-hour cooldown")
                 connection.execute(
                     """
@@ -133,7 +134,7 @@ class AlertStateStore:
                     SET round_id = ?, status = ?, first_seen_at = ?, last_seen_at = ?,
                         last_rank = ?, last_hot = ?, last_tags_json = ?,
                         missing_streak = 0, rank_decline_streak = ?, notified_at = NULL,
-                        retry_count = 0, completed_at = NULL
+                        retry_count = 0, completed_at = NULL, quiet_since_at = NULL
                     WHERE event_key = ?
                     """,
                     (
@@ -156,7 +157,7 @@ class AlertStateStore:
                     UPDATE events
                     SET last_seen_at = ?, last_rank = ?, last_hot = ?,
                         last_tags_json = ?, missing_streak = 0,
-                        rank_decline_streak = ?
+                        rank_decline_streak = ?, quiet_since_at = NULL
                     WHERE event_key = ?
                     """,
                     (
@@ -172,11 +173,35 @@ class AlertStateStore:
         assert event is not None
         return event
 
-    def mark_missing(self, event_key: str) -> AlertEvent:
+    def mark_missing(self, event_key: str, absent_at: datetime) -> AlertEvent:
+        """Record an absence and retain its first timestamp as the quiet boundary."""
+        absent_at = self._as_utc(absent_at)
         return self._mark_and_load(
             event_key,
-            "missing_streak = missing_streak + 1",
+            "missing_streak = missing_streak + 1, "
+            "quiet_since_at = COALESCE(quiet_since_at, ?)",
+            self._dump_time(absent_at),
         )
+
+    def mark_quiet_since(self, event_key: str, absent_at: datetime) -> AlertEvent:
+        """Record the first absence even if the event was already completed."""
+        absent_at = self._as_utc(absent_at)
+        with self._connection() as connection:
+            connection.execute("BEGIN IMMEDIATE")
+            row = connection.execute(
+                "SELECT status FROM events WHERE event_key = ?", (event_key,)
+            ).fetchone()
+            if row is None:
+                raise KeyError(f"unknown event: {event_key}")
+            if EventStatus(row["status"]) is not EventStatus.DISPATCHING:
+                connection.execute(
+                    "UPDATE events SET quiet_since_at = COALESCE(quiet_since_at, ?) "
+                    "WHERE event_key = ?",
+                    (self._dump_time(absent_at), event_key),
+                )
+        event = self.load_event(event_key)
+        assert event is not None
+        return event
 
     def complete(self, event_key: str, finished_at: datetime) -> AlertEvent:
         """Complete an event, creating a minimal completed record if necessary."""
@@ -260,6 +285,21 @@ class AlertStateStore:
         assert event is not None
         return event
 
+    def claim_dispatch(self, event_key: str) -> bool:
+        """Atomically claim the sole right to issue one ``Notify`` RPC.
+
+        The event must still be ``OBSERVED``.  A competing process that sees an
+        already-dispatching (or any terminal) event receives ``False`` and must
+        not make a remote call or alter its reservation.
+        """
+        with self._connection() as connection:
+            connection.execute("BEGIN IMMEDIATE")
+            cursor = connection.execute(
+                "UPDATE events SET status = ? WHERE event_key = ? AND status = ?",
+                (EventStatus.DISPATCHING.value, event_key, EventStatus.OBSERVED.value),
+            )
+            return cursor.rowcount == 1
+
     def mark_no_subscribers(self, event_key: str) -> AlertEvent:
         return self._mark_and_load(
             event_key,
@@ -312,12 +352,28 @@ class AlertStateStore:
             if event_key is not None:
                 reservation = connection.execute(
                     """
-                    SELECT 1 FROM daily_delivery_reservations
+                    SELECT day FROM daily_delivery_reservations
                     WHERE event_key = ?
                     """,
                     (event_key,),
                 ).fetchone()
                 if reservation:
+                    if reservation["day"] == day:
+                        return True
+                    reserved_count = connection.execute(
+                        "SELECT COUNT(*) AS count FROM daily_delivery_reservations WHERE day = ?",
+                        (day,),
+                    ).fetchone()["count"]
+                    if delivered_count + reserved_count >= DAILY_DELIVERY_LIMIT:
+                        connection.execute(
+                            "DELETE FROM daily_delivery_reservations WHERE event_key = ?",
+                            (event_key,),
+                        )
+                        return False
+                    connection.execute(
+                        "UPDATE daily_delivery_reservations SET day = ? WHERE event_key = ?",
+                        (day, event_key),
+                    )
                     return True
             reserved_count = connection.execute(
                 "SELECT COUNT(*) AS count FROM daily_delivery_reservations WHERE day = ?",
@@ -396,8 +452,8 @@ class AlertStateStore:
         return bool(
             event
             and event.status is EventStatus.COMPLETED
-            and event.completed_at is not None
-            and at - event.completed_at >= RESTART_COOLDOWN
+            and event.quiet_since_at is not None
+            and at - event.quiet_since_at >= RESTART_COOLDOWN
         )
 
     def active_event_keys(self) -> set[str]:
@@ -508,7 +564,8 @@ class AlertStateStore:
                     rank_decline_streak INTEGER NOT NULL DEFAULT 0,
                     notified_at TEXT,
                     retry_count INTEGER NOT NULL DEFAULT 0,
-                    completed_at TEXT
+                    completed_at TEXT,
+                    quiet_since_at TEXT
                 );
                 CREATE TABLE IF NOT EXISTS daily_delivery_budget (
                     day TEXT PRIMARY KEY,
@@ -540,6 +597,12 @@ class AlertStateStore:
                 ON daily_delivery_reservations (event_key);
                 """
             )
+            columns = {
+                row["name"]
+                for row in connection.execute("PRAGMA table_info(events)").fetchall()
+            }
+            if "quiet_since_at" not in columns:
+                connection.execute("ALTER TABLE events ADD COLUMN quiet_since_at TEXT")
 
     @contextmanager
     def _connection(self) -> Iterator[sqlite3.Connection]:
@@ -588,4 +651,5 @@ class AlertStateStore:
             notified_at=cls._load_time(row["notified_at"]),
             retry_count=row["retry_count"],
             completed_at=cls._load_time(row["completed_at"]),
+            quiet_since_at=cls._load_time(row["quiet_since_at"]),
         )

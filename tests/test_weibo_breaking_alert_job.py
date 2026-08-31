@@ -153,6 +153,8 @@ def test_completed_event_only_restarts_after_quiet_new_top_ten_appearance(tmp_pa
             [item("事件", rank=1, tags=("爆",))],
             [],
             [item("事件", rank=1, tags=("爆",))],
+            [],
+            [item("事件", rank=1, tags=("爆",))],
         ],
         clock,
     )
@@ -166,6 +168,12 @@ def test_completed_event_only_restarts_after_quiet_new_top_ten_appearance(tmp_pa
     monitor.run_once()  # Still in the preceding full snapshot, so not a new appearance.
     assert monitor._state_store.load_event("事件").round_id == 1
     monitor.run_once()
+    monitor.run_once()
+
+    assert monitor._state_store.load_event("事件").round_id == 1
+    monitor.run_once()
+    assert monitor._state_store.load_event("事件").quiet_since_at == clock.now
+    clock.advance(timedelta(hours=12))
     monitor.run_once()
 
     event = monitor._state_store.load_event("事件")
@@ -198,6 +206,52 @@ def test_reloaded_snapshot_prevents_existing_item_from_being_treated_as_new(tmp_
     event = second._state_store.load_event("已在榜")
     assert isinstance(event, AlertEvent)
     assert event.status is EventStatus.OBSERVED
+
+
+def test_every_new_monitor_first_round_is_a_no_alert_baseline_even_with_saved_snapshot(tmp_path):
+    path = tmp_path / "alerts.sqlite3"
+    initial = build_monitor(
+        tmp_path,
+        FakeNotifier(),
+        [[item("旧榜", rank=30, tags=())]],
+        path=path,
+    )
+    initial.run_once()
+
+    notifier = FakeNotifier()
+    restarted = build_monitor(
+        tmp_path,
+        notifier,
+        [[item("爆点", rank=1, tags=("爆",))]],
+        path=path,
+    )
+    restarted.run_once()
+
+    assert notifier.contents == []
+    assert restarted._state_store.load_event("爆点").status is EventStatus.OBSERVED
+
+
+def test_cross_midnight_retry_at_full_new_day_is_suppressed_without_sixth_notify(tmp_path):
+    clock = FakeClock(datetime(2026, 8, 31, 15, 59, tzinfo=timezone.utc))
+    notifier = FakeNotifier([RuntimeError("known error")])
+    monitor = build_monitor(
+        tmp_path,
+        notifier,
+        [[item("基线", rank=30, tags=())], [item("爆点")], [item("爆点")]],
+        clock,
+    )
+    monitor.run_once()
+    monitor.run_once()
+    for index in range(5):
+        assert monitor._state_store.reserve_daily_delivery(
+            clock.now + timedelta(minutes=1), f"次日{index}"
+        )
+
+    clock.advance(timedelta(minutes=2))
+    monitor.run_once()
+
+    assert len(notifier.contents) == 1
+    assert monitor._state_store.load_event("爆点").status is EventStatus.SUPPRESSED_BY_BUDGET
 
 
 def test_crash_after_qq_accepts_delivery_never_resends_after_restart(tmp_path, monkeypatch):

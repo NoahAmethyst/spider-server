@@ -22,6 +22,7 @@ def test_completed_event_can_only_start_new_round_after_twelve_hours(tmp_path):
     store = AlertStateStore(tmp_path / "alerts.sqlite3")
     finished = datetime(2026, 8, 31, 0, tzinfo=timezone.utc)
     store.complete("事件", finished)
+    store.mark_quiet_since("事件", finished)
 
     assert store.can_restart("事件", finished + timedelta(hours=11)) is False
     assert store.can_restart("事件", finished + timedelta(hours=12)) is True
@@ -67,6 +68,33 @@ def test_latest_complete_snapshot_persists_across_store_reloads(tmp_path):
     assert snapshot["事件"].tags == ("爆", "新")
 
 
+def test_existing_database_is_migrated_with_quiet_since_timestamp(tmp_path):
+    path = tmp_path / "legacy.sqlite3"
+    with sqlite3.connect(path) as connection:
+        connection.execute(
+            """
+            CREATE TABLE events (
+                event_key TEXT PRIMARY KEY, round_id INTEGER NOT NULL,
+                status TEXT NOT NULL, first_seen_at TEXT NOT NULL,
+                last_seen_at TEXT NOT NULL, last_rank INTEGER NOT NULL,
+                last_hot INTEGER NOT NULL, last_tags_json TEXT NOT NULL,
+                missing_streak INTEGER NOT NULL DEFAULT 0,
+                rank_decline_streak INTEGER NOT NULL DEFAULT 0,
+                notified_at TEXT, retry_count INTEGER NOT NULL DEFAULT 0,
+                completed_at TEXT
+            )
+            """
+        )
+
+    store = AlertStateStore(path)
+    columns = {
+        row[1] for row in sqlite3.connect(path).execute("PRAGMA table_info(events)")
+    }
+
+    assert "quiet_since_at" in columns
+    store.upsert_seen("事件", datetime(2026, 8, 31, tzinfo=timezone.utc), 1, 1, [])
+
+
 def test_no_subscribers_does_not_consume_daily_budget(tmp_path):
     store = AlertStateStore(tmp_path / "alerts.sqlite3")
     now = datetime(2026, 8, 31, 9, tzinfo=timezone.utc)
@@ -84,8 +112,8 @@ def test_missing_twice_then_complete_records_finished_time(tmp_path):
     finished = seen_at + timedelta(hours=1)
     store.upsert_seen("事件", seen_at, rank=1, hot=100, tags=[])
 
-    assert store.mark_missing("事件").missing_streak == 1
-    assert store.mark_missing("事件").missing_streak == 2
+    assert store.mark_missing("事件", seen_at).missing_streak == 1
+    assert store.mark_missing("事件", finished).missing_streak == 2
     store.complete("事件", finished)
 
     event = store.load_event("事件")
@@ -126,7 +154,7 @@ def test_seen_update_resets_missing_and_accepts_caller_rank_decline_streak(tmp_p
     store = AlertStateStore(tmp_path / "alerts.sqlite3")
     first_seen = datetime(2026, 8, 31, 9, tzinfo=timezone.utc)
     store.upsert_seen("事件", first_seen, rank=5, hot=100, tags=[])
-    store.mark_missing("事件")
+    store.mark_missing("事件", first_seen + timedelta(minutes=15))
 
     event = store.upsert_seen(
         "事件",
@@ -148,6 +176,7 @@ def test_restart_creates_next_round_only_after_completed_cooldown(tmp_path):
     store = AlertStateStore(tmp_path / "alerts.sqlite3")
     finished = datetime(2026, 8, 31, 0, tzinfo=timezone.utc)
     store.complete("事件", finished)
+    store.mark_quiet_since("事件", finished)
 
     with pytest.raises(ValueError, match="12-hour cooldown"):
         store.upsert_seen(
@@ -267,9 +296,7 @@ def test_memory_database_path_is_rejected(tmp_path):
         AlertStateStore(":memory:")
 
 
-def test_finalize_uses_the_original_shanghai_day_of_a_cross_midnight_reservation(
-    tmp_path,
-):
+def test_cross_midnight_retry_moves_reservation_to_the_retry_shanghai_day(tmp_path):
     path = tmp_path / "alerts.sqlite3"
     store = AlertStateStore(path)
     before_midnight = datetime(2026, 8, 31, 23, 59, tzinfo=ZoneInfo("Asia/Shanghai"))
@@ -285,9 +312,51 @@ def test_finalize_uses_the_original_shanghai_day_of_a_cross_midnight_reservation
 
     with sqlite3.connect(path) as connection:
         assert connection.execute(
-            "SELECT delivered_count FROM daily_delivery_budget WHERE day = '2026-08-31'"
+            "SELECT delivered_count FROM daily_delivery_budget WHERE day = '2026-09-01'"
         ).fetchone() == (1,)
         assert connection.execute("SELECT COUNT(*) FROM daily_delivery_reservations").fetchone() == (0,)
+
+
+def test_cross_midnight_retry_releases_old_reservation_when_new_day_is_full(tmp_path):
+    store = AlertStateStore(tmp_path / "alerts.sqlite3")
+    before_midnight = datetime(2026, 8, 31, 23, 59, tzinfo=ZoneInfo("Asia/Shanghai"))
+    after_midnight = before_midnight + timedelta(minutes=2)
+
+    assert store.reserve_daily_delivery(before_midnight, event_key="重试事件")
+    for index in range(5):
+        assert store.reserve_daily_delivery(after_midnight, event_key=f"次日{index}")
+
+    assert store.reserve_daily_delivery(after_midnight, event_key="重试事件") is False
+    with sqlite3.connect(tmp_path / "alerts.sqlite3") as connection:
+        assert connection.execute(
+            "SELECT COUNT(*) FROM daily_delivery_reservations WHERE event_key = '重试事件'"
+        ).fetchone() == (0,)
+
+
+def test_claim_dispatch_is_atomic_across_store_connections(tmp_path):
+    path = tmp_path / "alerts.sqlite3"
+    now = datetime(2026, 8, 31, 9, tzinfo=timezone.utc)
+    first = AlertStateStore(path)
+    second = AlertStateStore(path)
+    first.upsert_seen("事件", now, rank=1, hot=100, tags=[])
+    assert first.reserve_daily_delivery(now, event_key="事件")
+
+    claims: list[bool] = []
+    ready = threading.Barrier(2)
+
+    def claim(store):
+        ready.wait()
+        claims.append(store.claim_dispatch("事件"))
+
+    threads = [threading.Thread(target=claim, args=(store,)) for store in (first, second)]
+    for thread in threads:
+        thread.start()
+    for thread in threads:
+        thread.join(timeout=5)
+
+    assert claims.count(True) == 1
+    assert claims.count(False) == 1
+    assert first.load_event("事件").status is EventStatus.DISPATCHING
 
 
 def test_release_uses_the_original_shanghai_day_of_a_cross_midnight_reservation(

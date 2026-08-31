@@ -23,6 +23,7 @@ You can find all GRPC API from [proto file](protocol%2Fspider.proto).
 | Latest Gold Price                     | ☑️      |                                                                       |
 | Currency Exchange rate                | ☑️      |                                                                       |
 
+微博热搜的突发爆点提醒可选启用，具体的事件规则、环境变量、持久化与上线核验见[微博突发爆点提醒运维说明](docs/weibo-breaking-alerts.md)。
 
 
 

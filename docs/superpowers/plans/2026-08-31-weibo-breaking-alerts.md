@@ -1,5 +1,7 @@
 # 微博突发爆点提醒 Implementation Plan
 
+> **2026-09-02 更新：** 已取消每日五条播报上限。本计划中涉及每日配额、额度结算或第五/第六条限制的历史描述均由当前实现和运维说明取代。
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** 每 30 分钟分析微博热搜变化，以评分和去重状态机识别突发爆点，并通过 qq-bot 的 `Notify` RPC 向现有微博热搜订阅者发送每日最多五条的纯文本提醒。

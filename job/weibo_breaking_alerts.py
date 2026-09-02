@@ -197,11 +197,6 @@ class WeiboBreakingAlertMonitor:
             retrying,
         )
 
-        if not self._state_store.reserve_daily_delivery(now, event.event_key):
-            self._state_store.mark_suppressed_by_budget(event.event_key)
-            logger.info("Weibo breaking-alert budget suppressed event=%s", event.event_key)
-            return
-
         content = render_notification(
             title=current.title,
             url=current.url,
@@ -235,15 +230,6 @@ class WeiboBreakingAlertMonitor:
             logger.info("Weibo breaking-alert has no subscribers event=%s", event.event_key)
             return
 
-        if not self._state_store.finalize_daily_delivery(now, event.event_key):
-            # Notify has already succeeded, so terminally deduplicate it rather
-            # than risk a duplicate delivery if durable budget settlement fails.
-            logger.error(
-                "Weibo breaking-alert delivery settlement failed; retaining unknown "
-                "dispatch event=%s",
-                event.event_key,
-            )
-            return
         self._state_store.mark_notified(event.event_key, now)
         logger.info("Weibo breaking-alert Notify delivered event=%s", event.event_key)
 

@@ -89,7 +89,7 @@ def test_new_top_one_breaking_event_notifies_once_then_deduplicates(tmp_path):
     assert monitor._state_store.load_event("爆点").status is EventStatus.NOTIFIED
 
 
-def test_daily_budget_suppresses_the_sixth_breaking_event(tmp_path):
+def test_all_eligible_breaking_events_are_notified_without_a_daily_limit(tmp_path):
     notifier = FakeNotifier()
     six_events = [item(f"爆点{index}", rank=1) for index in range(6)]
     monitor = build_monitor(tmp_path, notifier, [[item("基线", rank=30, tags=())], six_events])
@@ -97,11 +97,14 @@ def test_daily_budget_suppresses_the_sixth_breaking_event(tmp_path):
     monitor.run_once()
     monitor.run_once()
 
-    assert len(notifier.contents) == 5
-    assert monitor._state_store.load_event("爆点5").status is EventStatus.SUPPRESSED_BY_BUDGET
+    assert len(notifier.contents) == 6
+    assert all(
+        monitor._state_store.load_event(f"爆点{index}").status is EventStatus.NOTIFIED
+        for index in range(6)
+    )
 
 
-def test_no_subscribers_is_terminal_and_does_not_consume_budget(tmp_path):
+def test_no_subscribers_is_terminal(tmp_path):
     notifier = FakeNotifier([NotifyOutcome.NO_SUBSCRIBERS])
     monitor = build_monitor(
         tmp_path,
@@ -115,10 +118,6 @@ def test_no_subscribers_is_terminal_and_does_not_consume_budget(tmp_path):
 
     assert len(notifier.contents) == 1
     assert monitor._state_store.load_event("爆点").status is EventStatus.NO_SUBSCRIBERS
-    assert all(
-        monitor._state_store.reserve_daily_delivery(monitor._clock(), f"补位{index}")
-        for index in range(5)
-    )
 
 
 def test_notify_error_retries_exactly_once_then_becomes_terminal(tmp_path):
@@ -254,7 +253,7 @@ def test_every_new_monitor_first_round_is_a_no_alert_baseline_even_with_saved_sn
     assert restarted._state_store.load_event("爆点").status is EventStatus.OBSERVED
 
 
-def test_cross_midnight_retry_at_full_new_day_is_suppressed_without_sixth_notify(tmp_path):
+def test_cross_midnight_retry_is_not_limited_by_prior_delivery_reservations(tmp_path):
     clock = FakeClock(datetime(2026, 8, 31, 15, 59, tzinfo=timezone.utc))
     notifier = FakeNotifier([RuntimeError("known error")])
     monitor = build_monitor(
@@ -273,8 +272,8 @@ def test_cross_midnight_retry_at_full_new_day_is_suppressed_without_sixth_notify
     clock.advance(timedelta(minutes=2))
     monitor.run_once()
 
-    assert len(notifier.contents) == 1
-    assert monitor._state_store.load_event("爆点").status is EventStatus.SUPPRESSED_BY_BUDGET
+    assert len(notifier.contents) == 2
+    assert monitor._state_store.load_event("爆点").status is EventStatus.NOTIFIED
 
 
 def test_crash_after_qq_accepts_delivery_never_resends_after_restart(tmp_path, monkeypatch):
@@ -290,11 +289,11 @@ def test_crash_after_qq_accepts_delivery_never_resends_after_restart(tmp_path, m
     )
     first.run_once()
 
-    def crash_before_settlement(*args, **kwargs):
+    def crash_before_notified(*args, **kwargs):
         del args, kwargs
         raise KeyboardInterrupt("simulated process crash after QQ accepted the message")
 
-    monkeypatch.setattr(store, "finalize_daily_delivery", crash_before_settlement)
+    monkeypatch.setattr(store, "mark_notified", crash_before_notified)
     with pytest.raises(KeyboardInterrupt, match="simulated process crash"):
         first.run_once()
 

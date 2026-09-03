@@ -97,12 +97,12 @@ def assess(
     tags = _tags(current)
     score = 0
     reasons: list[str] = []
-    strong_signal = False
+    strict_signal = False
 
     if previous is None:
         score += 2
         reasons.append("新上榜")
-        strong_signal = rank <= 10
+        strict_signal = rank <= 5
     else:
         previous_rank = _field(previous, "rank", None)
         if previous_rank is None:
@@ -112,11 +112,11 @@ def assess(
         if rank_gain >= 30:
             score += 3
             reasons.append("排名跃升")
-            strong_signal = rank <= 20
         elif rank_gain >= 15:
             score += 2
             reasons.append("排名跃升")
-            strong_signal = rank <= 20
+        if rank_gain >= 20 and rank <= 10:
+            strict_signal = True
 
         previous_hot = _field(previous, "hot", None)
         if previous_hot is None:
@@ -126,21 +126,20 @@ def assess(
             if hot >= previous_hot * 3:
                 score += 3
                 reasons.append("热度翻倍")
-                strong_signal = strong_signal or rank <= 20
+                strict_signal = strict_signal or rank <= 10
             elif hot >= previous_hot * 2:
                 score += 2
                 reasons.append("热度翻倍")
-                strong_signal = strong_signal or rank <= 20
 
     top_score, top_reason = _top_score(rank)
     score += top_score
     if top_reason:
         reasons.append(top_reason)
 
-    if BREAKING_TAGS.intersection(tags):
+    has_breaking_tag = bool(BREAKING_TAGS.intersection(tags))
+    if has_breaking_tag:
         score += 3
         reasons.append("爆点标签")
-        strong_signal = strong_signal or rank <= 20
 
     if PROMOTION_TAGS.intersection(tags):
         score += 1
@@ -148,7 +147,7 @@ def assess(
 
     return Assessment(
         score=score,
-        is_breaking=score >= 5 and strong_signal,
+        is_breaking=score >= 7 and strict_signal and has_breaking_tag,
         reasons=reasons,
     )
 

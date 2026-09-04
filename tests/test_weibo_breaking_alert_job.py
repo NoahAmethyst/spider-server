@@ -146,7 +146,7 @@ def test_pending_retry_runs_before_rank_decline_can_complete_event(tmp_path):
         tmp_path,
         notifier,
         [
-            [item("爆点", rank=30, tags=())],
+            [item("爆点", rank=1, tags=())],
             [item("爆点", rank=2, tags=("爆",))],
             [item("爆点", rank=3, tags=("爆",))],
         ],

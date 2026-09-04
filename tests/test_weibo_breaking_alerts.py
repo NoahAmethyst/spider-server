@@ -45,7 +45,7 @@ def event(**overrides):
     return DomainEvent(**values)
 
 
-def test_new_top_five_item_with_breaking_tag_reaches_strict_threshold():
+def test_new_top_five_item_with_breaking_tag_reaches_threshold():
     assessment = assess(
         previous=None,
         current=item(rank=5, hot=0, tags=["当前爆词"]),
@@ -56,23 +56,23 @@ def test_new_top_five_item_with_breaking_tag_reaches_strict_threshold():
     assert assessment.reasons == ["新上榜", "Top 10", "爆点标签"]
 
 
-def test_new_top_six_item_with_breaking_tag_is_not_strict_enough():
+def test_new_top_six_item_with_breaking_tag_reaches_original_threshold():
     assessment = assess(previous=None, current=item(rank=6, hot=0, tags=["爆"]))
 
     assert assessment.score == 7
-    assert assessment.is_breaking is False
+    assert assessment.is_breaking is True
 
 
-def test_top_ten_rank_jump_requires_at_least_twenty_places_and_breaking_tag():
+def test_top_ten_rank_jump_of_fifteen_places_with_breaking_tag_reaches_threshold():
     accepted = assess(previous=item(rank=30), current=item(rank=10, tags=["沸"]))
     rejected = assess(previous=item(rank=29), current=item(rank=10, tags=["沸"]))
 
     assert accepted.score == 7
     assert accepted.is_breaking is True
-    assert rejected.is_breaking is False
+    assert rejected.is_breaking is True
 
 
-def test_top_ten_heat_change_requires_tripling_and_breaking_tag():
+def test_top_ten_heat_doubling_with_breaking_tag_reaches_threshold():
     accepted = assess(
         previous=item(rank=10, hot=100), current=item(rank=10, hot=300, tags=["爆"])
     )
@@ -83,16 +83,16 @@ def test_top_ten_heat_change_requires_tripling_and_breaking_tag():
     assert accepted.score == 8
     assert accepted.is_breaking is True
     assert rejected.score == 7
-    assert rejected.is_breaking is False
+    assert rejected.is_breaking is True
 
 
-def test_extreme_rank_and_heat_change_without_a_breaking_tag_never_notifies():
+def test_extreme_rank_and_heat_change_without_a_breaking_tag_can_notify():
     assessment = assess(
         previous=item(rank=50, hot=100), current=item(rank=1, hot=300, tags=[])
     )
 
     assert assessment.score == 9
-    assert assessment.is_breaking is False
+    assert assessment.is_breaking is True
 
 
 def test_tag_outside_top_twenty_is_not_breaking():
